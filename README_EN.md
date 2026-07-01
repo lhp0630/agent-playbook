@@ -8,7 +8,7 @@ A YAML-driven multi-role, multi-stage AI discussion simulator. For example, conf
 
 - LangChain-based YAML-driven engine
 - Multi-stage, multi-role collaborative discussion workflows
-- Built-in requirement review, code review, and debate flows
+- Built-in naming, debate, requirement review, and code review flows
 - Each role can be configured with a different LLM model
 - Supports `.env` environment variables and YAML configuration files
 - Topic supports three modes: dynamic generation, hardcoded, external file reference
@@ -35,8 +35,9 @@ OPENAI_API_KEY=sk-xxx
 Env vars are the lowest priority fallback. If a value is set in YAML, the env var is ignored.
 
 ```bash
-uv run badger                                          # Default debate flow
-uv run badger --config path/to/yaml                    # Use a specific config
+uv run badger                                          # Default naming flow
+uv run badger --config badger/config/naming.yaml       # Naming flow
+uv run badger --config badger/config/debate.yaml       # Debate flow
 uv run badger --config badger/config/requirement_review.yaml  # Requirement review
 uv run badger --config badger/config/code_review.yaml         # Code review
 ```
@@ -45,6 +46,7 @@ uv run badger --config badger/config/code_review.yaml         # Code review
 
 Config files are located in `badger/config/`:
 
+- `naming.yaml` - Naming flow (default)
 - `debate.yaml` - Debate flow
 - `requirement_review.yaml` - Requirement review flow
 - `code_review.yaml` - Code review flow

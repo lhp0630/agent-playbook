@@ -8,7 +8,7 @@
 
 - 基于 LangChain 的 YAML 配置驱动引擎
 - 支持多阶段、多角色协作讨论流程
-- 内置需求评审、代码评审和辩论流程
+- 内置取名、辩论、需求评审、代码评审流程
 - 每个角色可单独配置不同的 LLM 模型
 - 支持 `.env` 环境变量和 YAML 配置文件
 - Topic 支持三种模式：动态生成、硬编码、外部文件引用
@@ -35,8 +35,9 @@ OPENAI_API_KEY=sk-xxx
 环境变量作为最低优先级的 fallback，yaml 中配置了则不使用环境变量。
 
 ```bash
-uv run badger                                          # 默认辩论流程
-uv run badger --config path/to/yaml                    # 指定配置文件
+uv run badger                                          # 默认取名流程
+uv run badger --config badger/config/naming.yaml       # 指定取名流程
+uv run badger --config badger/config/debate.yaml       # 辩论流程
 uv run badger --config badger/config/requirement_review.yaml  # 需求评审
 uv run badger --config badger/config/code_review.yaml         # 代码评审
 ```
@@ -45,6 +46,7 @@ uv run badger --config badger/config/code_review.yaml         # 代码评审
 
 配置文件位于 `badger/config/` 目录：
 
+- `naming.yaml` - 取名流程（默认）
 - `debate.yaml` - 辩论流程
 - `requirement_review.yaml` - 需求评审流程
 - `code_review.yaml` - 代码评审流程

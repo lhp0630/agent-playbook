@@ -16,7 +16,7 @@ from .models import AppConfig
 
 console = Console()
 
-DEFAULT_CONFIG_PATH = Path(__file__).parent / "config" / "debate.yaml"
+DEFAULT_CONFIG_PATH = Path(__file__).parent / "config" / "naming.yaml"
 
 
 def load_config(path: str | Path | None = None) -> AppConfig:
