@@ -13,7 +13,7 @@ class LlmConfig(BaseModel):
     api_key: str = ""
 
 
-class RoleConfig(BaseModel):
+class Role(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     name: str
@@ -21,7 +21,7 @@ class RoleConfig(BaseModel):
     llm: LlmConfig = Field(default_factory=LlmConfig)
 
 
-class StepConfig(BaseModel):
+class Step(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     role: str
@@ -29,41 +29,40 @@ class StepConfig(BaseModel):
     input: str = ""
 
 
-class StageConfig(BaseModel):
+class Stage(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     name: str
     description: str = ""
-    steps: list[StepConfig] = Field(default_factory=list)
+    steps: list[Step] = Field(default_factory=list)
 
 
-class FlowDef(BaseModel):
+class Flow(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     name: str = ""
     description: str = ""
-    stages: list[StageConfig] = Field(default_factory=list)
-
-
-class AppConfig(BaseModel):
-    model_config = ConfigDict(extra="forbid")
 
     llm: LlmConfig = Field(default_factory=LlmConfig)
     temperature: float = 0.8
-    max_rounds: int = 3
     instructions: str = ""
-    topic: str = ""
-    roles: list[RoleConfig] = Field(default_factory=list)
-    flow: FlowDef = Field(default_factory=FlowDef)
 
-    def resolve_topic(self, config_dir: Path | None = None) -> str:
+    topic: str = ""
+    max_rounds: int = 3
+
+    roles: list[Role] = Field(default_factory=list)
+    stages: list[Stage] = Field(default_factory=list)
+
+    wodk_dir: Path | None = None
+
+    def resolve_topic(self) -> str:
         if not self.topic:
             return ""
 
         if self.topic.startswith("file:"):
             file_path = self.topic[5:]
-            if config_dir and not Path(file_path).is_absolute():
-                file_path = config_dir / file_path
+            if self.wodk_dir and not Path(file_path).is_absolute():
+                file_path = self.wodk_dir / file_path
             return Path(file_path).read_text(encoding="utf-8").strip()
 
         return self.topic

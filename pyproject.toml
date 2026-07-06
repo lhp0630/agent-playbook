@@ -1,7 +1,7 @@
 [project]
 name = "badger"
 version = "0.1.0"
-description = "LangChain-based YAML-driven multi-role AI discussion engine with workflow support"
+description = "A YAML-driven, multi-role, multi-stage AI discussion engine. Configure distinct personas and run naming, requirement review, code review or debate workflows."
 requires-python = ">=3.10"
 dependencies = [
     "langchain[openai]>=0.3",
@@ -13,9 +13,7 @@ dependencies = [
 ]
 
 [dependency-groups]
-dev = [
-    "ruff>=0.8",
-]
+dev = ["ruff>=0.8"]
 
 [tool.ruff]
 line-length = 100

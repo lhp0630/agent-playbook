@@ -2,29 +2,28 @@
 
 [中文](README.md) | [English](README_EN.md)
 
-A YAML-driven multi-role, multi-stage AI discussion simulator. For example, configure AI roles with distinct personalities to start a debate. Or conduct project requirement reviews and code audits.
+A YAML-driven, multi-role, multi-stage AI discussion engine. Configure distinct personas and run naming, requirement review, code review or debate workflows.
 
 ## Features
 
-- LangChain-based YAML-driven engine
-- Multi-stage, multi-role collaborative discussion workflows
+- YAML-configured engine built on LangChain
+- Multi-stage, multi-role collaborative discussions
 - Built-in naming, debate, requirement review, and code review flows
-- Each role can be configured with a different LLM model
-- Supports `.env` environment variables and YAML configuration files
-- Topic supports three modes: dynamic generation, hardcoded, external file reference
+- Per-role LLM settings; `.env` and YAML with YAML taking precedence
+- Topic modes: dynamic generation, hardcoded, or external file
 
 ## Installation
 
-Requires Python 3.10+. Uses [uv](https://docs.astral.sh/uv/) for dependency management:
+Python 3.10+. Uses [uv](https://docs.astral.sh/uv/) for dependencies:
 
 ```bash
-git clone https://github.com/lhp0630/debate.git && cd debate
-uv sync
+git clone https://github.com/lhp0630/badger.git && cd badger
+uv sync --all-groups
 ```
 
-## Usage
+## Quick Start
 
-Copy `.env.example` to `.env` and fill in your model settings:
+Copy `.env.example` to `.env` and set your model credentials (YAML values override env vars):
 
 ```bash
 OPENAI_MODEL=your-model-name
@@ -32,75 +31,81 @@ OPENAI_BASE_URL=https://your-api-endpoint/v1
 OPENAI_API_KEY=sk-xxx
 ```
 
-Env vars are the lowest priority fallback. If a value is set in YAML, the env var is ignored.
+Run a built-in flow (`-n` selects by name; omit for a random pick):
 
 ```bash
-uv run badger                                          # Default naming flow
-uv run badger --config badger/config/naming.yaml       # Naming flow
-uv run badger --config badger/config/debate.yaml       # Debate flow
-uv run badger --config badger/config/requirement_review.yaml  # Requirement review
-uv run badger --config badger/config/code_review.yaml         # Code review
+uv run badger -n "name generation"
+uv run badger -n "office debate"
+uv run badger -n "requirement review"
+uv run badger -n "code review"
 ```
+
+Load custom flows from a directory:
+
+```bash
+uv run badger -n "my flow" -p ./my_flows
+```
+
+## Example
+
+The code review flow reads sample code from `code_review.yaml` and runs a multi-role analysis with fix suggestions:
+
+```bash
+uv run badger -n "code review"
+```
+
+![Code review output example](readme_assets/code_review.png)
+![Code review output example 2](readme_assets/code_review_2.png)
+
+## Built-in Flows
+
+Config files live in `badger/builtin_flows/`:
+
+| File | Flow name |
+|------|-----------|
+| `naming.yaml` | Name Generation |
+| `debate.yaml` | Office Debate |
+| `requirement_review.yaml` | Requirement Review |
+| `code_review.yaml` | Code Review |
 
 ## Configuration
 
-Config files are located in `badger/config/`:
-
-- `naming.yaml` - Naming flow (default)
-- `debate.yaml` - Debate flow
-- `requirement_review.yaml` - Requirement review flow
-- `code_review.yaml` - Code review flow
-
-Config structure:
+Minimal config structure:
 
 ```yaml
-llm:                          # Global model config (fallback)
+name: "My Flow"
+llm:                          # Global model (fallback)
   # model: "gpt-4o-mini"
-  # base_url: ""
-  # api_key: ""
-
 temperature: 0.8
-topic: "requirement text"     # Optional: hardcoded topic or "file:path/to/file.md"
-
-instructions: |               # Optional: global system prompt
+topic: "requirement text"     # or "file:example.md"
+instructions: |               # Optional global prompt
   IMPORTANT: Always respond in Chinese.
-
-roles:                        # Role definitions
+roles:
   - name: "Zhang Wei"
-    description: |            # Role description (auto-injected into system_prompt)
-      Architect. Rigorous, deep thinker.
-      Expertise in Python system architecture.
-    llm:
-      # model: "gpt-4o"
-
-flow:                         # Flow definition
-  name: "Flow Name"
-  description: "Flow description"
-  stages:                     # Stage list
+    description: "Architect, rigorous thinker."
+flow:
+  stages:
     - name: "Stage 1"
-      description: "Stage description"
-      steps:                  # Step list
-        - role: "role name"
+      steps:
+        - role: "Zhang Wei"
           system_prompt: |
-            You are {role_name}.
-            {role_description}
-            ...your prompt...
+            You are {role_name}. {role_description}
           input: |
-            User input: {user_input}
-            Context: {context}
+            {user_input}
+            {context}
 ```
 
-## Topic Modes
+**Topic modes**
 
-1. **Dynamic Generation**: `topic` is empty, generated by flow steps (e.g., debate flow)
-2. **Hardcoded**: `topic: "requirement text"`
-3. **External File**: `topic: "file:code_review_example.md"` (relative path based on config file directory)
+- Empty — generated by flow steps (e.g. debate)
+- Hardcoded — `topic: "requirement text"`
+- External file — `topic: "file:example.md"` (path relative to config file)
 
-## Custom Flow
+## Custom Flows
 
-1. Create a new YAML config file in `badger/config/`
-2. Define `roles` and `flow`
-3. Run with `--config` parameter
+1. Write a YAML file with a top-level `name` field
+2. Place it in a directory and pass `-p` to load it
+3. Run with `-n` matching the flow name
 
 ## License
 

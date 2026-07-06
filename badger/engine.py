@@ -2,7 +2,6 @@ from __future__ import annotations
 
 from collections.abc import Iterator
 from datetime import datetime, timezone
-from pathlib import Path
 from typing import Any
 
 from langchain_core.output_parsers import StrOutputParser
@@ -11,7 +10,7 @@ from langchain_core.runnables import Runnable, RunnableConfig
 from pydantic import BaseModel, ConfigDict, Field
 
 from .llm import make_llm
-from .models import AppConfig, RoleConfig
+from .models import Flow, Role
 
 
 class StepResult(BaseModel):
@@ -35,18 +34,17 @@ class FlowState(BaseModel):
 
 
 class FlowEngine(Runnable[dict[str, Any], FlowState]):
-    def __init__(self, config: AppConfig, config_dir: Path | None = None):
+    def __init__(self, config: Flow):
         self.config = config
-        self.config_dir = config_dir
         self._last_state: FlowState | None = None
 
-    def _get_role(self, role_name: str) -> RoleConfig:
+    def _get_role(self, role_name: str) -> Role:
         for role in self.config.roles:
             if role.name == role_name:
                 return role
 
         if role_name == "__moderator__":
-            return RoleConfig(name="__moderator__")
+            return Role(name="__moderator__")
 
         raise ValueError(f"Role not found: {role_name}")
 
@@ -86,7 +84,7 @@ class FlowEngine(Runnable[dict[str, Any], FlowState]):
         return "\n".join(lines)
 
     async def _execute_steps(self, state: FlowState) -> Iterator[StepResult]:
-        for stage in self.config.flow.stages:
+        for stage in self.config.stages:
             state.current_stage = stage.name
 
             for i, step in enumerate(stage.steps):
@@ -123,7 +121,7 @@ class FlowEngine(Runnable[dict[str, Any], FlowState]):
         user_input = input.get("user_input") or input.get("topic", "")
 
         if not user_input:
-            user_input = self.config.resolve_topic(self.config_dir)
+            user_input = self.config.resolve_topic()
 
         state = FlowState(user_input=user_input)
 
@@ -145,7 +143,7 @@ class FlowEngine(Runnable[dict[str, Any], FlowState]):
         user_input = input.get("user_input") or input.get("topic", "")
 
         if not user_input:
-            user_input = self.config.resolve_topic(self.config_dir)
+            user_input = self.config.resolve_topic()
 
         state = FlowState(user_input=user_input)
 

@@ -4,12 +4,12 @@ from typing import Any
 
 from langchain.chat_models import init_chat_model
 
-from .models import AppConfig, LlmConfig
+from .models import Flow, LlmConfig
 
 _llm_cache: dict[str, Any] = {}
 
 
-def make_llm(llm_config: LlmConfig, app_config: AppConfig) -> Any:
+def make_llm(llm_config: LlmConfig, app_config: Flow) -> Any:
     model = llm_config.model or app_config.llm.model
 
     if not model:

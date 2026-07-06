@@ -2,33 +2,35 @@ from __future__ import annotations
 
 import asyncio
 import os
+import random
 from pathlib import Path
 
-import fire
 import yaml
 from dotenv import find_dotenv, load_dotenv
-from rich.console import Console
-from rich.markdown import Markdown
-from rich.panel import Panel
 
 from .engine import FlowEngine, FlowState, StepResult
-from .models import AppConfig
+from .models import Flow
+from .ui import console, print_step
 
-console = Console()
-
-DEFAULT_CONFIG_PATH = Path(__file__).parent / "config" / "naming.yaml"
+BUILTIN_FLOWS_DIR = Path(__file__).parent / "builtin_flows"
 
 
-def load_config(path: str | Path | None = None) -> AppConfig:
+_flows: dict[str, Flow] = {}
+
+
+def _load_config(file: str | Path | None = None) -> Flow:
     env_file = find_dotenv(usecwd=True)
     load_dotenv(env_file)
 
-    path = Path(path) if path else DEFAULT_CONFIG_PATH
+    if not file:
+        raise ValueError("No path provided")
 
-    if not path.exists():
-        raise FileNotFoundError(f"Config not found: {path}")
+    file = Path(file)
 
-    with open(path) as f:
+    if not file.exists():
+        raise FileNotFoundError(f"Config not found: {file}")
+
+    with open(file) as f:
         data = yaml.safe_load(f) or {}
 
     # Env vars fill empty values (lower priority than yaml)
@@ -48,28 +50,47 @@ def load_config(path: str | Path | None = None) -> AppConfig:
         if not role.get("llm"):
             role["llm"] = {}
 
-    return AppConfig(**data)
+    data["wodk_dir"] = file.parent
+
+    return Flow(**data)
 
 
-def print_step(step: StepResult) -> None:
-    console.print(
-        Panel(
-            Markdown(step.content),
-            title=f"[bold]{step.role}[/bold] — {step.stage}",
-            border_style="blue",
-        )
-    )
-    console.print()
+def _load_flows(path: str | Path | None = None):
+    supported_extensions = [".yaml", ".yml"]
+
+    paths: list[Path] = []
+
+    for s in supported_extensions:
+        paths.extend(BUILTIN_FLOWS_DIR.glob(f"*{s}"))
+        if path:
+            paths.extend(Path(path).glob(f"*{s}"))
+
+    paths = [f for f in paths if f.is_file()]
+
+    for path in paths:
+        try:
+            flow = _load_config(path)
+            _flows[flow.name.lower().replace(" ", "-")] = flow
+        except Exception as e:
+            console.print(f"[bold red]Error loading flow {path}: {e}[/bold red]")
 
 
-async def _async_run(config_path: str | None):
-    config = load_config(config_path)
-    config_dir = Path(config_path).parent if config_path else DEFAULT_CONFIG_PATH.parent
+async def arun(name: str | None = None, path: str | None = None):
+    _load_flows(path)
 
-    console.rule(f"[bold magenta]{config.flow.name or 'Flow'}[/bold magenta]")
-    console.print(f"[bold]Model:[/bold] {config.llm.model or 'default'}\n")
+    if not name:
+        name = random.choice(list(_flows.keys()))
 
-    engine = FlowEngine(config, config_dir=config_dir)
+    flow = _flows.get(name.lower().replace(" ", "-"))
+    if not flow:
+        console.print(f"[bold red]Flow not found: {name}[/bold red]")
+        return
+
+    console.rule(f"[bold magenta]{flow.name or 'Flow'}[/bold magenta]")
+    # console.print(f"[bold]Model:[/bold] {flow.llm.model or 'default'}\n")
+    console.print("[bold]Model:[/bold] gpt-4o-mini\n")
+
+    engine = FlowEngine(flow)
 
     current_stage = ""
     async for item in engine.astream({}):
@@ -86,14 +107,5 @@ async def _async_run(config_path: str | None):
     console.print(f"[bold]Total steps:[/bold] {len(state.results)}")
 
 
-def run(config: str | None = None):
-    """Run the flow engine.
-
-    Args:
-        config: Path to config YAML file.
-    """
-    asyncio.run(_async_run(config))
-
-
-def main():
-    fire.Fire(run)
+def run(name: str | None = None, path: str | None = None):
+    asyncio.run(arun(name, path))

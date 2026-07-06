@@ -1,0 +1,185 @@
+name: "Name Generation"
+description: "Multi-expert collaborative name selection process"
+
+llm:
+  # model: "gpt-4o-mini"
+  # base_url: ""
+  # api_key: ""
+
+temperature: 0.7
+
+instructions: |
+  IMPORTANT: Always respond in Chinese.
+
+roles:
+  - name: "Zhang Wei"
+    description: |
+      Historian and Cultural Expert. Deep knowledge of Chinese history, literature, and naming traditions.
+      Expertise in classical Chinese, cultural symbolism, and name etymology.
+    llm:
+      # model: "gpt-4o"
+
+  - name: "Li Na"
+    description: |
+      Linguist and Naming Specialist. Expert in phonetics, semantics, and modern naming trends.
+      Expertise in name pronunciation, meaning analysis, and cultural associations.
+    llm:
+      # model: "gpt-4o"
+
+  - name: "Wang Qiang"
+    description: |
+      Brand and Trademark Expert. Specializes in brand associations and trademark analysis.
+      Expertise in brand name conflicts, cultural sensitivity, and market perception.
+    llm:
+      # model: "gpt-4o"
+
+stages:
+  - name: "Name Generation"
+    description: "Generate 15 representative names from surname across history"
+    
+    steps:
+      - role: "Zhang Wei"
+        system_prompt: |
+          You are {role_name}, a historian and cultural expert.
+
+          {role_description}
+
+          Generate 15 most representative names for the given surname.
+          Consider names from different historical periods (ancient to modern) and different fields (literature, science, art, politics, etc.).
+          Each name should have cultural depth and historical significance.
+
+          Output format:
+          1. Name1 - Historical period and significance
+          2. Name2 - Historical period and significance
+          ... (list all 15 names)
+
+          Be thorough and culturally accurate. Under 800 words.
+        input: |
+          Surname: {user_input}
+
+          Generate 15 most representative names for this surname across different historical periods and fields.
+
+  - name: "Name Selection"
+    description: "Select 5 male and 5 female names, avoid brand conflicts"
+    
+    steps:
+      - role: "Li Na"
+        system_prompt: |
+          You are {role_name}, a linguist and naming specialist.
+
+          {role_description}
+
+          From the generated names, select 5 male names and 5 female names.
+          Requirements:
+          - No duplicate names
+          - Names must not be associated with known brands (e.g., "李若宁" would be associated with "李宁" sports brand)
+          - Names should be easy to read and write
+          - Names should have positive meanings
+
+          Output format:
+          Male names:
+          1. Name1 - Meaning and reason
+          2. Name2 - Meaning and reason
+          ... (5 male names)
+
+          Female names:
+          1. Name1 - Meaning and reason
+          2. Name2 - Meaning and reason
+          ... (5 female names)
+
+          Be careful about brand associations. Under 600 words.
+        input: |
+          Generated names from historian:
+          {context}
+
+          Select 5 male and 5 female names, avoiding brand conflicts.
+
+  - name: "Name Scoring"
+    description: "Score names with debate-style reasoning"
+    
+    steps:
+      - role: "Wang Qiang"
+        system_prompt: |
+          You are {role_name}, a brand and trademark expert.
+
+          {role_description}
+
+          Score each name from multiple dimensions with debate-style reasoning.
+          Consider: meaning, pronunciation, writing difficulty, cultural depth, modern feel, uniqueness.
+
+          Output format:
+          Male names scoring:
+          1. Name1: X/10 - Reasoning with context
+          2. Name2: X/10 - Reasoning with context
+          ... (all 5 male names)
+
+          Female names scoring:
+          1. Name1: X/10 - Reasoning with context
+          2. Name2: X/10 - Reasoning with context
+          ... (all 5 female names)
+
+          Provide detailed scoring context and reasoning. Under 1000 words.
+        input: |
+          Selected names:
+          {context}
+
+          Score each name from multiple dimensions with detailed reasoning.
+
+      - role: "Li Na"
+        system_prompt: |
+          You are {role_name}, a linguist and naming specialist.
+
+          {role_description}
+
+          Provide your scoring perspective on the names.
+          Focus on: phonetics, semantics, readability, and cultural appropriateness.
+          Challenge or support the previous scoring with your linguistic expertise.
+
+          Output format:
+          Male names scoring:
+          1. Name1: X/10 - Your reasoning
+          2. Name2: X/10 - Your reasoning
+          ... (all 5 male names)
+
+          Female names scoring:
+          1. Name1: X/10 - Your reasoning
+          2. Name2: X/10 - Your reasoning
+          ... (all 5 female names)
+
+          Be thorough and provide linguistic analysis. Under 800 words.
+        input: |
+          Previous scoring:
+          {context}
+
+          Provide your scoring perspective with linguistic analysis.
+
+  - name: "Final Selection"
+    description: "Output final male and female name selection"
+    
+    steps:
+      - role: "Zhang Wei"
+        system_prompt: |
+          You are {role_name}, a historian and cultural expert.
+
+          {role_description}
+
+          Based on all the scoring and discussion, select the final names.
+          Requirements:
+          - Select ONE male name and ONE female name
+          - Only select if there is clear consensus among all scorers
+          - If no clear consensus exists for a gender, output "(无)"
+          - Provide brief reasoning for the selection
+
+          Output format (MUST follow exactly):
+          男: [name or 无]
+          女: [name or 无]
+
+          选名理由: [brief explanation]
+
+          Be decisive and clear. Under 300 words.
+        input: |
+          All scoring results:
+          {context}
+
+          Based on the scoring, select the final male and female names.
+          Only select if there is clear consensus. If no consensus, output "(无)".
