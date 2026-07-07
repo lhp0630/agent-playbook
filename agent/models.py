@@ -40,20 +40,21 @@ class Stage(BaseModel):
 class Flow(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
-    name: str = ""
-    description: str = ""
+    name: str
+    description: str | None = None
 
     llm: LlmConfig = Field(default_factory=LlmConfig)
     temperature: float = 0.8
-    instructions: str = ""
+    instructions: str | None = None
 
-    topic: str = ""
-    max_rounds: int = 3
+    topic: str | None = None
+    max_rounds: int = 1
 
     roles: list[Role] = Field(default_factory=list)
     stages: list[Stage] = Field(default_factory=list)
 
     wodk_dir: Path | None = None
+    """Internal: The directory to resolve file paths relative to."""
 
     def resolve_topic(self) -> str:
         if not self.topic:
