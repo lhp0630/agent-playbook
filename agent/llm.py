@@ -1,39 +1,25 @@
 from __future__ import annotations
 
-from typing import Any
-
-from langchain.chat_models import BaseChatModel, init_chat_model
+from pydantic_ai.models import Model
+from pydantic_ai.models.openai import OpenAIChatModel
+from pydantic_ai.providers.openai import OpenAIProvider
+from pydantic_ai.settings import ModelSettings
 
 from .models import Flow, LlmConfig
 
-_llm_cache: dict[str, Any] = {}
 
-
-def make_llm(config: LlmConfig, flow: Flow) -> BaseChatModel:
-    model = config.model or flow.llm.model
-
-    if not model:
+def make_model(config: LlmConfig, flow: Flow) -> Model:
+    """Build a pydantic-ai OpenAI-compatible model from YAML / env config."""
+    model_name = config.model or flow.llm.model
+    if not model_name:
         raise ValueError(
-            "No model configured. Set OPENAI_MODEL in .env, or configure llm.model in config.yaml."
+            "No model configured. Set OPENAI_MODEL in .env, "
+            "or configure llm.model in the agent YAML."
         )
 
-    base_url = config.base_url or flow.llm.base_url
-    api_key = config.api_key or flow.llm.api_key
-    temperature = flow.temperature
+    base_url = (config.base_url or flow.llm.base_url) or None
+    api_key = (config.api_key or flow.llm.api_key) or None
+    settings = ModelSettings(temperature=flow.temperature)
 
-    cache_key = f"{model}|{base_url}|{api_key}"
-
-    if cache_key not in _llm_cache:
-        kwargs: dict[str, Any] = {
-            "model": model,
-            "model_provider": "openai",
-            "temperature": temperature,
-        }
-        if base_url:
-            kwargs["base_url"] = base_url
-        if api_key:
-            kwargs["api_key"] = api_key
-
-        _llm_cache[cache_key] = init_chat_model(**kwargs)
-
-    return _llm_cache[cache_key]
+    provider = OpenAIProvider(base_url=base_url, api_key=api_key)
+    return OpenAIChatModel(model_name, provider=provider, settings=settings)

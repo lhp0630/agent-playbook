@@ -1,14 +1,13 @@
-# Badger
+# agent-playbook
 
 [中文](README_CN.md) | [English](README.md)
 
-Badger 是一个**声明式多智能体分治 Agent 框架**。复杂任务被拆解为专业角色与顺序阶段，全部在 YAML 中定义 — 无需硬编码编排图。每个 YAML 文件定义一个 Agent；换一份配置即可定义新的领域 Agent。
+agent-playbook 是基于 pydantic-ai DynamicWorkflow 的 YAML 多智能体工作流。
 
 ## 功能
 
-- YAML 配置驱动，基于 LangChain
-- 多 Agent 分阶段协作（`roles` + `stages` + `steps`）
-- 可插拔执行计划、步骤执行器与生命周期钩子
+- YAML 配置驱动，基于 [pydantic-ai](https://ai.pydantic.dev/) + [pydantic-ai-harness](https://github.com/pydantic/pydantic-ai-harness) `DynamicWorkflow`
+- `roles` 成为子 Agent（从配置读取 `name`、`description`、`model`）
 - 内置取名、辩论、需求评审、代码评审 Agent
 
 ## 安装
@@ -16,7 +15,7 @@ Badger 是一个**声明式多智能体分治 Agent 框架**。复杂任务被�
 Python 3.10+，依赖管理使用 [uv](https://docs.astral.sh/uv/)：
 
 ```bash
-git clone https://github.com/lhp0630/badger.git && cd badger
+git clone https://github.com/lhp0630/agent-playbook.git && cd agent-playbook
 uv sync --all-groups
 ```
 
@@ -33,16 +32,16 @@ OPENAI_API_KEY=sk-xxx
 运行内置 Agent（`-n` 指定 Agent 名，省略则随机选择）：
 
 ```bash
-uv run badger -n "name generation"
-uv run badger -n "office debate"
-uv run badger -n "requirement review"
-uv run badger -n "code review"
+agent -n "name generation"
+agent -n "office debate"
+agent -n "requirement review"
+agent -n "code review"
 ```
 
 加载自定义 Agent 配置目录：
 
 ```bash
-uv run badger -n "my flow" -p ./my_flows
+agent -n "my flow" -p ./my_flows
 ```
 
 ## 示例
@@ -50,10 +49,8 @@ uv run badger -n "my flow" -p ./my_flows
 代码评审 Agent 读取 `code_review.yaml` 中的示例代码，多角色协作输出问题分析与修复建议：
 
 ```bash
-uv run badger -n "code review"
+agent -n "code review"
 ```
-
-<!-- ![Code Review](./readme_assets/code_review.gif) -->
 
 ## 内置 Agent
 
@@ -66,9 +63,11 @@ uv run badger -n "code review"
 | `requirement_review.yaml` | Requirement Review |
 | `code_review.yaml` | Code Review |
 
+每个 YAML 提供编排器的 `name` / `description` / `llm.model`，以及成为 DynamicWorkflow 子 Agent 的 `roles`。
+
 ## 自定义 Agent
 
-编写 YAML 配置文件，通过 `-p` 指定目录、`-n` 按名称运行。配置结构与模板变量详见 [docs/technical.md](docs/technical.md)，架构说明见 [docs/architecture.md](docs/architecture.md)。
+编写包含 `name`、`description`、`llm`、`roles` 的 YAML，通过 `-p` 指定目录、`-n` 按名称运行。可选的 `stages` 会作为编排器的建议工作流提示。
 
 ## License
 

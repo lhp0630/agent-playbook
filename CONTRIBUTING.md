@@ -1,21 +1,21 @@
-# 贡献代码规范
+# Contributing
 
-## 核心规则
+## Core rules
 
-1. 禁止直接向 `main`/`master` 提交，必须从 `main`/`master` 切功能分支
-2. 未获用户许可，禁止 commit、push、创建 PR
-3. 禁止 `git push --force` 到 `main`/`master`
-4. 变更范围不明确时，先向用户确认
+1. Never commit directly to `main`/`master`; always branch from `main`/`master`
+2. Do not commit, push, or open a PR without the user's explicit permission
+3. Never `git push --force` to `main`/`master`
+4. If the scope of a change is unclear, ask the user first
 
-## 分支命名
+## Branch naming
 
 ```
-feat/<简短描述>    # 新功能
-fix/<简短描述>     # Bug 修复
-docs/<简短描述>    # 文档变更
+feat/<short-description>    # New feature
+fix/<short-description>     # Bug fix
+docs/<short-description>    # Documentation
 ```
 
-## Commit 规范
+## Commit conventions
 
 ```
 <type>(<scope>): <subject>
@@ -28,36 +28,36 @@ docs/<简短描述>    # 文档变更
 - **type**
   - feat | fix | docs | style | refactor | tweak | perf | test | chore | ci | revert
 
-- **subject 规则**
-  - 祈使语气，不加句号，不超过 50 字符
-  - 原子提交：每次仅解决一个逻辑变更
+- **subject**
+  - Imperative mood, no trailing period, at most 50 characters
+  - Atomic commits: one logical change per commit
 
 - **breaking change**
-  - type 后加 `!`，如 `feat!:`
+  - Append `!` after the type, e.g. `feat!:`
 
-- **docs 类型约束**
-  - 不得混入代码逻辑变更
+- **docs type**
+  - Must not include code/logic changes
 
-## PR 流程
+## PR workflow
 
 ```bash
-# 1. 推送分支
+# 1. Push the branch
 git push -u origin HEAD
 
-# 2. 创建 PR
-gh pr create --title "<标题>" --body "$(cat <<'EOF'
+# 2. Create the PR
+gh pr create --title "<title>" --body "$(cat <<'EOF'
 ## Summary
-- <变更要点>
+- <key changes>
 
 ## Test plan
-- [ ] <验证项>
+- [ ] <verification steps>
 EOF
 )"
 ```
 
-## 违规处理
+## If a rule is broken
 
-1. 暂停当前操作
-2. 报告违规规则
-3. 给出修正方案
-4. 等待用户确认
+1. Stop the current action
+2. Report which rule was violated
+3. Propose a fix
+4. Wait for the user's confirmation

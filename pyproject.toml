@@ -1,15 +1,16 @@
 [project]
-name = "badger"
+name = "agent-playbook"
 version = "0.1.0"
-description = "Declarative multi-agent divide-and-conquer agent framework. Configure specialist roles and stage flows in YAML to assemble coding agents, review agents, debate agents, and other collaborative agents."
+description = "YAML-configured multi-agent workflows powered by pydantic-ai DynamicWorkflow."
 requires-python = ">=3.10"
 dependencies = [
-    "langchain[openai]>=0.3",
     "pydantic>=2.0",
     "rich>=13.0",
     "pyyaml>=6.0",
     "python-dotenv>=1.0",
     "fire>=0.7",
+    "pydantic-ai-slim[openai]>=2.18.0",
+    "pydantic-ai-harness[dynamic-workflow]>=0.11.0",
 ]
 
 [dependency-groups]
@@ -18,16 +19,6 @@ dev = [
     "pytest-asyncio>=1.4.0",
     "ruff>=0.8",
 ]
-
-[tool.ruff]
-line-length = 100
-target-version = "py310"
-
-[tool.ruff.lint]
-select = ["E", "F", "I", "UP", "B", "SIM"]
-
-[tool.ruff.format]
-quote-style = "double"
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"

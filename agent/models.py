@@ -38,6 +38,8 @@ class Stage(BaseModel):
 
 
 class Flow(BaseModel):
+    """YAML agent config: roles become DynamicWorkflow sub-agents."""
+
     model_config = ConfigDict(extra="forbid")
 
     name: str
@@ -53,8 +55,8 @@ class Flow(BaseModel):
     roles: list[Role] = Field(default_factory=list)
     stages: list[Stage] = Field(default_factory=list)
 
-    wodk_dir: Path | None = None
-    """Internal: The directory to resolve file paths relative to."""
+    work_dir: Path | None = None
+    """Directory used to resolve relative ``file:`` topic paths."""
 
     def resolve_topic(self) -> str:
         if not self.topic:
@@ -62,8 +64,8 @@ class Flow(BaseModel):
 
         if self.topic.startswith("file:"):
             file_path = self.topic[5:]
-            if self.wodk_dir and not Path(file_path).is_absolute():
-                file_path = self.wodk_dir / file_path
+            if self.work_dir and not Path(file_path).is_absolute():
+                file_path = self.work_dir / file_path
             return Path(file_path).read_text(encoding="utf-8").strip()
 
         return self.topic

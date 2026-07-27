@@ -1,14 +1,13 @@
-# Badger
+# agent-playbook
 
 [中文](README_CN.md) | [English](README.md)
 
-Badger is a **declarative multi-agent divide-and-conquer agent framework**. Complex tasks are decomposed into specialist roles and sequential stages, all defined in YAML — no hard-coded orchestration graph required. Each YAML file defines one agent; swapping the config defines a new domain agent.
+agent-playbook is YAML-configured multi-agent workflows powered by pydantic-ai DynamicWorkflow.
 
 ## Features
 
-- YAML-configured agents built on LangChain
-- Multi-agent, multi-stage collaboration (`roles` + `stages` + `steps`)
-- Pluggable execution plan, step executor, and lifecycle hooks
+- YAML-configured agents on [pydantic-ai](https://ai.pydantic.dev/) + [pydantic-ai-harness](https://github.com/pydantic/pydantic-ai-harness) `DynamicWorkflow`
+- Specialist `roles` become sub-agents (`name`, `description`, `model` from config)
 - Built-in naming, debate, requirement review, and code review agents
 
 ## Installation
@@ -16,7 +15,7 @@ Badger is a **declarative multi-agent divide-and-conquer agent framework**. Comp
 Python 3.10+. Uses [uv](https://docs.astral.sh/uv/) for dependencies:
 
 ```bash
-git clone https://github.com/lhp0630/badger.git && cd badger
+git clone https://github.com/lhp0630/agent-playbook.git && cd agent-playbook
 uv sync --all-groups
 ```
 
@@ -33,16 +32,16 @@ OPENAI_API_KEY=sk-xxx
 Run a built-in agent (`-n` selects by name; omit for a random pick):
 
 ```bash
-uv run badger -n "name generation"
-uv run badger -n "office debate"
-uv run badger -n "requirement review"
-uv run badger -n "code review"
+agent -n "name generation"
+agent -n "office debate"
+agent -n "requirement review"
+agent -n "code review"
 ```
 
 Load custom agent configs from a directory:
 
 ```bash
-uv run badger -n "my flow" -p ./my_flows
+agent -n "my flow" -p ./my_flows
 ```
 
 ## Example
@@ -50,10 +49,8 @@ uv run badger -n "my flow" -p ./my_flows
 The code review agent reads sample code from `code_review.yaml` and runs a multi-role analysis with fix suggestions:
 
 ```bash
-uv run badger -n "code review"
+agent -n "code review"
 ```
-
-<!-- ![Code Review](./readme_assets/code_review.gif) -->
 
 ## Built-in Agents
 
@@ -66,9 +63,11 @@ Config files live in `agent/builtin_agents/`:
 | `requirement_review.yaml` | Requirement Review |
 | `code_review.yaml` | Code Review |
 
+Each YAML supplies the orchestrator `name` / `description` / `llm.model`, plus `roles` that become DynamicWorkflow sub-agents.
+
 ## Custom Agents
 
-Write a YAML config file, load it with `-p`, and run with `-n`. See [docs/technical.md](docs/technical.md) for config structure and template variables, and [docs/architecture.md](docs/architecture.md) for architecture details.
+Write a YAML config with `name`, `description`, `llm`, and `roles`, then load it with `-p` and run with `-n`. Optional `stages` become suggested workflow hints for the orchestrator.
 
 ## License
 
