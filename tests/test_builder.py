@@ -1,7 +1,7 @@
 from pydantic_ai_harness.dynamic_workflow import DynamicWorkflow
 
 from agent.builder import build_agent, to_identifier
-from agent.models import Flow, LlmConfig, Role, Stage, Step
+from agent.models import Act, Cast, Cue, ModelConfig, PlaybookSpec
 
 
 def _dynamic_workflow(orchestrator) -> DynamicWorkflow:
@@ -19,29 +19,29 @@ def test_to_identifier_normalizes_display_names():
 
 
 def test_build_agent_wires_roles():
-    flow = Flow(
+    playbook = PlaybookSpec(
         name="Code Review",
         description="Review code",
-        llm=LlmConfig(model="gpt-4o-mini", api_key="test-key"),
+        model=ModelConfig(model="gpt-4o-mini", api_key="test-key", temperature=0.3),
         instructions="Always respond in Chinese.",
-        roles=[
-            Role(name="Chen Jie", description="Senior architect."),
+        cast=[
+            Cast(name="Chen Jie", description="Senior architect."),
         ],
-        stages=[
-            Stage(
+        acts=[
+            Act(
                 name="Analysis",
                 description="Initial pass",
-                steps=[
-                    Step(
-                        role="Chen Jie",
-                        system_prompt="You are {role_name}. {role_description}",
+                cues=[
+                    Cue(
+                        cast="Chen Jie",
+                        instructions="You are {role_name}. {role_description}",
                     )
                 ],
             )
         ],
     )
 
-    agent = build_agent(flow)
+    agent = build_agent(playbook)
 
     assert agent.name == "code_review"
     assert agent.description == "Review code"
@@ -52,18 +52,18 @@ def test_build_agent_wires_roles():
 
 
 def test_build_agent_adds_moderator_role():
-    flow = Flow(
+    playbook = PlaybookSpec(
         name="Office Debate",
-        llm=LlmConfig(model="gpt-4o-mini", api_key="test-key"),
-        roles=[Role(name="Alice Chen", description="CTO")],
-        stages=[
-            Stage(
+        model=ModelConfig(model="gpt-4o-mini", api_key="test-key", max_rounds=3),
+        cast=[Cast(name="Alice Chen", description="CTO")],
+        acts=[
+            Act(
                 name="Topic",
-                steps=[Step(role="__moderator__", system_prompt="Generate a topic.")],
+                cues=[Cue(cast="__moderator__", instructions="Generate a topic.")],
             )
         ],
     )
 
-    agent = build_agent(flow)
+    agent = build_agent(playbook)
     names = {entry.name for entry in _dynamic_workflow(agent).agents}
     assert names == {"alice_chen", "moderator"}

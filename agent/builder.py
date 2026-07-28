@@ -4,7 +4,7 @@ from pydantic_ai import Agent
 from pydantic_ai_harness.dynamic_workflow import DynamicWorkflow
 
 from .llm import make_model
-from .models import Flow, Role, Stage
+from .models import Act, Cast, PlaybookSpec
 
 
 def to_identifier(name: str) -> str:
@@ -19,16 +19,16 @@ def to_identifier(name: str) -> str:
     return cleaned.lower()
 
 
-def _build_role_system_prompts(flow: Flow, role: Role) -> list[str]:
+def _build_cast_system_prompts(playbook: PlaybookSpec, member: Cast) -> list[str]:
     prompts: list[str] = []
     seen: set[str] = set()
-    for stage in flow.stages:
-        for step in stage.steps:
-            if step.role != role.name or not step.system_prompt.strip():
+    for act in playbook.acts:
+        for cue in act.cues:
+            if cue.cast != member.name or not cue.instructions.strip():
                 continue
-            text = step.system_prompt.format(
-                role_name=role.name,
-                role_description=role.description,
+            text = cue.instructions.format(
+                role_name=member.name,
+                role_description=member.description,
             ).strip()
             if text and text not in seen:
                 seen.add(text)
@@ -36,53 +36,53 @@ def _build_role_system_prompts(flow: Flow, role: Role) -> list[str]:
     return prompts
 
 
-def _build_role_instructions(flow: Flow, role: Role) -> str:
-    prompts: list[str] = [f"You are {role.name}."]
-    if role.description.strip():
-        prompts.append(role.description.strip())
-    if flow.instructions and flow.instructions.strip():
-        prompts.append(flow.instructions.strip())
-    for prompt in _build_role_system_prompts(flow, role):
+def _build_cast_instructions(playbook: PlaybookSpec, member: Cast) -> str:
+    prompts: list[str] = [f"You are {member.name}."]
+    if member.description.strip():
+        prompts.append(member.description.strip())
+    if playbook.instructions and playbook.instructions.strip():
+        prompts.append(playbook.instructions.strip())
+    for prompt in _build_cast_system_prompts(playbook, member):
         prompts.append(prompt)
     return "\n\n".join(prompts)
 
 
-def _build_stage_hint(stage: Stage) -> str:
-    roles = [step.role for step in stage.steps]
-    role_names = ", ".join(dict.fromkeys(roles)) or "(none)"
-    desc = stage.description.strip() or "No description."
-    return f"- {stage.name} ({role_names}): {desc}"
+def _build_act_hint(act: Act) -> str:
+    casts = [cue.cast for cue in act.cues]
+    cast_names = ", ".join(dict.fromkeys(casts)) or "(none)"
+    desc = act.description.strip() or "No description."
+    return f"- {act.name} ({cast_names}): {desc}"
 
 
-def _build_instructions(flow: Flow) -> str:
+def _build_instructions(playbook: PlaybookSpec) -> str:
     prompts: list[str] = []
 
-    if flow.description:
-        prompts.append(f"You orchestrate a multi-agent workflow: {flow.description.strip()}")
+    if playbook.description:
+        prompts.append(f"You orchestrate a multi-agent workflow: {playbook.description.strip()}")
 
-    if flow.instructions and flow.instructions.strip():
-        prompts.append(flow.instructions.strip())
+    if playbook.instructions and playbook.instructions.strip():
+        prompts.append(playbook.instructions.strip())
 
-    if flow.roles:
+    if playbook.cast:
         catalog = "\n".join(
             (
-                f"- `{to_identifier(role.name)}` ({role.name}): "
-                f"{role.description.strip() or 'No description.'}"
+                f"- `{to_identifier(member.name)}` ({member.name}): "
+                f"{member.description.strip() or 'No description.'}"
             )
-            for role in flow.roles
+            for member in playbook.cast
         )
         prompts.append(
             "Use the `run_workflow` tool to coordinate these specialists "
             f"(call each as an async function with `task=...`):\n{catalog}"
         )
 
-    if flow.stages:
-        stage_lines = "\n".join(_build_stage_hint(stage) for stage in flow.stages)
-        prompts.append(f"Suggested workflow stages:\n{stage_lines}")
+    if playbook.acts:
+        act_lines = "\n".join(_build_act_hint(act) for act in playbook.acts)
+        prompts.append(f"Suggested workflow acts:\n{act_lines}")
 
-    if flow.max_rounds > 1:
+    if playbook.model.max_rounds > 1:
         prompts.append(
-            f"When a stage is iterative (e.g. debate), run up to {flow.max_rounds} rounds."
+            f"When an act is iterative (e.g. debate), run up to {playbook.model.max_rounds} rounds."
         )
 
     prompts.append(
@@ -92,55 +92,55 @@ def _build_instructions(flow: Flow) -> str:
     return "\n\n".join(prompts)
 
 
-def _ensure_moderator(flow: Flow) -> list[Role]:
-    """Ensure debate-style `__moderator__` steps have a role entry."""
+def _ensure_moderator(playbook: PlaybookSpec) -> list[Cast]:
+    """Ensure debate-style `__moderator__` cues have a cast entry."""
 
-    roles = list(flow.roles)
-    names = {role.name for role in roles}
-    needs_moderator = any(
-        step.role == "__moderator__" for stage in flow.stages for step in stage.steps
-    )
+    members = list(playbook.cast)
+    names = {member.name for member in members}
+    needs_moderator = any(cue.cast == "__moderator__" for act in playbook.acts for cue in act.cues)
     if needs_moderator and "__moderator__" not in names:
-        roles.append(
-            Role(
+        members.append(
+            Cast(
                 name="__moderator__",
                 description="Moderator who sets topics and keeps the discussion on track.",
             )
         )
-    return roles
+    return members
 
 
-def build_agent(flow: Flow) -> Agent:
-    """Build a pydantic-ai orchestrator with DynamicWorkflow from a Flow config."""
+def build_agent(playbook: PlaybookSpec) -> Agent:
+    """Build a pydantic-ai orchestrator with DynamicWorkflow from a PlaybookSpec."""
 
-    roles = _ensure_moderator(flow)
-    if not roles:
-        raise ValueError(f"Flow {flow.name!r} has no roles to orchestrate.")
+    members = _ensure_moderator(playbook)
+    if not members:
+        raise ValueError(f"Playbook {playbook.name!r} has no cast to orchestrate.")
 
-    default_model = make_model(flow.llm, flow)
-    role_agents: list[Agent] = []
+    default_model = make_model(playbook.model)
+    cast_agents: list[Agent] = []
     seen: set[str] = set()
 
-    for role in roles:
-        ident = to_identifier(role.name)
+    for member in members:
+        ident = to_identifier(member.name)
         if ident in seen:
-            raise ValueError(f"Duplicate sub-agent name {ident!r} after normalizing {role.name!r}.")
+            raise ValueError(
+                f"Duplicate sub-agent name {ident!r} after normalizing {member.name!r}."
+            )
         seen.add(ident)
 
-        model = make_model(role.llm, flow) if role.llm.model else default_model
-        role_agents.append(
+        model = make_model(member.model) if member.model.model else default_model
+        cast_agents.append(
             Agent(
                 model,
                 name=ident,
-                description=(role.description.strip() or f"Specialist role: {role.name}"),
-                instructions=_build_role_instructions(flow, role),
+                description=(member.description.strip() or f"Specialist role: {member.name}"),
+                instructions=_build_cast_instructions(playbook, member),
             )
         )
 
     return Agent(
         default_model,
-        name=to_identifier(flow.name),
-        description=flow.description or flow.name,
-        instructions=_build_instructions(flow),
-        capabilities=[DynamicWorkflow(agents=role_agents)],
+        name=to_identifier(playbook.name),
+        description=playbook.description or playbook.name,
+        instructions=_build_instructions(playbook),
+        capabilities=[DynamicWorkflow(agents=cast_agents)],
     )

@@ -7,8 +7,9 @@ agent-playbook 是基于 pydantic-ai DynamicWorkflow 的 YAML 多智能体工作
 ## 功能
 
 - YAML 配置驱动，基于 [pydantic-ai](https://ai.pydantic.dev/) + [pydantic-ai-harness](https://github.com/pydantic/pydantic-ai-harness) `DynamicWorkflow`
-- `roles` 成为子 Agent（从配置读取 `name`、`description`、`model`）
+- `cast` 成为子 Agent（从配置读取 `name`、`description`、`model`）
 - 内置取名、辩论、需求评审、代码评审 Agent
+- 通过 `agent.to_web()` 提供 Web 聊天界面（uvicorn）
 
 ## 安装
 
@@ -29,45 +30,38 @@ OPENAI_BASE_URL=https://your-api-endpoint/v1
 OPENAI_API_KEY=sk-xxx
 ```
 
-运行内置 Agent（`-n` 指定 Agent 名，省略则随机选择）：
+运行内置 Playbook（`-n` 须与 YAML 中的 `name` **完全一致**；省略则随机选择）。会启动 Web 聊天界面，在浏览器中输入需求即可：
 
 ```bash
-agent -n "name generation"
-agent -n "office debate"
-agent -n "requirement review"
-agent -n "code review"
+agent -n "Name Generation"
+agent -n "Office Debate"
+agent -n "Requirement Review"
+agent -n "Code Review"
 ```
 
-加载自定义 Agent 配置目录：
+可选监听地址（默认 `127.0.0.1:8000`）：
 
 ```bash
-agent -n "my flow" -p ./my_flows
+agent -n "Code Review" --host 127.0.0.1 --port 8000
+```
+
+加载自定义 Playbook 配置目录：
+
+```bash
+agent -n "My Playbook" -p ./my_playbooks
 ```
 
 ## 示例
 
-代码评审 Agent 读取 `code_review.yaml` 中的示例代码，多角色协作输出问题分析与修复建议：
+取名 Agent 的 Web UI：编排器规划多角色工作流，并返回最终结果：
 
 ```bash
-agent -n "code review"
+agent -n "Name Generation"
 ```
 
-## 内置 Agent
-
-配置文件位于 `agent/builtin_agents/`：
-
-| 文件 | Agent 名 |
-|------|--------|
-| `naming.yaml` | Name Generation |
-| `debate.yaml` | Office Debate |
-| `requirement_review.yaml` | Requirement Review |
-| `code_review.yaml` | Code Review |
-
-每个 YAML 提供编排器的 `name` / `description` / `llm.model`，以及成为 DynamicWorkflow 子 Agent 的 `roles`。
-
-## 自定义 Agent
-
-编写包含 `name`、`description`、`llm`、`roles` 的 YAML，通过 `-p` 指定目录、`-n` 按名称运行。可选的 `stages` 会作为编排器的建议工作流提示。
+| | |
+| --- | --- |
+| ![Web UI — workflow planning](./readme_assets/web_1.png) | ![Web UI — final result](./readme_assets/web_2.png) |
 
 ## License
 

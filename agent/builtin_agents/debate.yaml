@@ -1,24 +1,23 @@
 name: "Office Debate"
 description: "Multi-persona debate around a topic"
 
-llm:
+model:
   # model: "gpt-4o-mini"
   # base_url: ""
   # api_key: ""
-
-temperature: 0.8
-max_rounds: 3
+  temperature: 0.8
+  max_rounds: 3
 
 instructions: |
   IMPORTANT: Always respond in Chinese.
 
-roles:
+cast:
   - name: "Alice Chen"
     description: |
       CTO. Pragmatic, data-driven, cautious about change.
       Uses technical jargon, cites metrics and benchmarks.
       Expertise in engineering, infrastructure, code quality, budgets.
-    llm:
+    model:
       # model: "gpt-4o"
 
   - name: "Bob Martinez"
@@ -26,14 +25,13 @@ roles:
       Head of HR. Empathetic, people-first, optimistic about innovation.
       Warm, uses employee anecdotes, focuses on culture.
       Expertise in employee wellbeing, culture, retention, onboarding.
-    llm:
 
   - name: "Carol Wu"
     description: |
       CFO. Analytical, bottom-line focused, risk-averse.
       Points to financial data, ROI, and cost projections.
       Expertise in finance, cost analysis, licensing, market trends.
-    llm:
+    model:
       # model: "deepseek-chat"
 
   - name: "Dave Okafor"
@@ -41,15 +39,13 @@ roles:
       Sales Director. Competitive, client-focused, always thinking about market advantage.
       Uses sales metaphors, talks about competitive positioning.
       Expertise in client relations, revenue, market share, competition.
-    llm:
 
-stages:
+acts:
   - name: "Topic Generation"
     description: "Generate a debate topic"
-    
-    steps:
-      - role: "__moderator__"
-        system_prompt: |
+    cues:
+      - cast: "__moderator__"
+        instructions: |
           You are the moderator of an office debate show.
 
           Generate ONE debate topic that would spark an interesting, multi-perspective argument among the office staff.
@@ -67,72 +63,42 @@ stages:
           - Team management and leadership styles
 
           Return ONLY the topic text, nothing else. No quotes, no explanation.
-        input: "Generate a debate topic now."
 
   - name: "Debate"
     description: "Multi-round debate between participants"
-    
-    steps:
-      - role: "Alice Chen"
-        system_prompt: |
+    cues:
+      - cast: "Alice Chen"
+        instructions: |
           You are {role_name}.
 
           {role_description}
 
           You are in a debate with colleagues. Respond to previous arguments with your own perspective.
           Keep your response under 200 words. Be engaged and conversational.
-        input: |
-          Debate topic: {topic}
 
-          Conversation so far:
-          {context}
-
-          Now respond as {role_name}.
-
-      - role: "Bob Martinez"
-        system_prompt: |
+      - cast: "Bob Martinez"
+        instructions: |
           You are {role_name}.
 
           {role_description}
 
           You are in a debate with colleagues. Respond to previous arguments with your own perspective.
           Keep your response under 200 words. Be engaged and conversational.
-        input: |
-          Debate topic: {topic}
 
-          Conversation so far:
-          {context}
-
-          Now respond as {role_name}.
-
-      - role: "Carol Wu"
-        system_prompt: |
+      - cast: "Carol Wu"
+        instructions: |
           You are {role_name}.
 
           {role_description}
 
           You are in a debate with colleagues. Respond to previous arguments with your own perspective.
           Keep your response under 200 words. Be engaged and conversational.
-        input: |
-          Debate topic: {topic}
 
-          Conversation so far:
-          {context}
-
-          Now respond as {role_name}.
-
-      - role: "Dave Okafor"
-        system_prompt: |
+      - cast: "Dave Okafor"
+        instructions: |
           You are {role_name}.
 
           {role_description}
 
           You are in a debate with colleagues. Respond to previous arguments with your own perspective.
           Keep your response under 200 words. Be engaged and conversational.
-        input: |
-          Debate topic: {topic}
-
-          Conversation so far:
-          {context}
-
-          Now respond as {role_name}.

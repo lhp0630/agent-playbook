@@ -1,45 +1,43 @@
 name: "Name Generation"
 description: "Multi-expert collaborative name selection process"
 
-llm:
+model:
   # model: "gpt-4o-mini"
   # base_url: ""
   # api_key: ""
-
-temperature: 0.7
+  temperature: 0.7
 
 instructions: |
   IMPORTANT: Always respond in Chinese.
 
-roles:
+cast:
   - name: "Zhang Wei"
     description: |
       Historian and Cultural Expert. Deep knowledge of Chinese history, literature, and naming traditions.
       Expertise in classical Chinese, cultural symbolism, and name etymology.
-    llm:
+    model:
       # model: "gpt-4o"
 
   - name: "Li Na"
     description: |
       Linguist and Naming Specialist. Expert in phonetics, semantics, and modern naming trends.
       Expertise in name pronunciation, meaning analysis, and cultural associations.
-    llm:
+    model:
       # model: "gpt-4o"
 
   - name: "Wang Qiang"
     description: |
       Brand and Trademark Expert. Specializes in brand associations and trademark analysis.
       Expertise in brand name conflicts, cultural sensitivity, and market perception.
-    llm:
+    model:
       # model: "gpt-4o"
 
-stages:
+acts:
   - name: "Name Generation"
     description: "Generate 15 representative names from surname across history"
-    
-    steps:
-      - role: "Zhang Wei"
-        system_prompt: |
+    cues:
+      - cast: "Zhang Wei"
+        instructions: |
           You are {role_name}, a historian and cultural expert.
 
           {role_description}
@@ -54,17 +52,12 @@ stages:
           ... (list all 15 names)
 
           Be thorough and culturally accurate. Under 800 words.
-        input: |
-          Surname: {user_input}
-
-          Generate 15 most representative names for this surname across different historical periods and fields.
 
   - name: "Name Selection"
     description: "Select 5 male and 5 female names, avoid brand conflicts"
-    
-    steps:
-      - role: "Li Na"
-        system_prompt: |
+    cues:
+      - cast: "Li Na"
+        instructions: |
           You are {role_name}, a linguist and naming specialist.
 
           {role_description}
@@ -88,18 +81,12 @@ stages:
           ... (5 female names)
 
           Be careful about brand associations. Under 600 words.
-        input: |
-          Generated names from historian:
-          {context}
-
-          Select 5 male and 5 female names, avoiding brand conflicts.
 
   - name: "Name Scoring"
     description: "Score names with debate-style reasoning"
-    
-    steps:
-      - role: "Wang Qiang"
-        system_prompt: |
+    cues:
+      - cast: "Wang Qiang"
+        instructions: |
           You are {role_name}, a brand and trademark expert.
 
           {role_description}
@@ -119,14 +106,9 @@ stages:
           ... (all 5 female names)
 
           Provide detailed scoring context and reasoning. Under 1000 words.
-        input: |
-          Selected names:
-          {context}
 
-          Score each name from multiple dimensions with detailed reasoning.
-
-      - role: "Li Na"
-        system_prompt: |
+      - cast: "Li Na"
+        instructions: |
           You are {role_name}, a linguist and naming specialist.
 
           {role_description}
@@ -147,18 +129,12 @@ stages:
           ... (all 5 female names)
 
           Be thorough and provide linguistic analysis. Under 800 words.
-        input: |
-          Previous scoring:
-          {context}
-
-          Provide your scoring perspective with linguistic analysis.
 
   - name: "Final Selection"
     description: "Output final male and female name selection"
-    
-    steps:
-      - role: "Zhang Wei"
-        system_prompt: |
+    cues:
+      - cast: "Zhang Wei"
+        instructions: |
           You are {role_name}, a historian and cultural expert.
 
           {role_description}
@@ -177,9 +153,3 @@ stages:
           选名理由: [brief explanation]
 
           Be decisive and clear. Under 300 words.
-        input: |
-          All scoring results:
-          {context}
-
-          Based on the scoring, select the final male and female names.
-          Only select if there is clear consensus. If no consensus, output "(无)".

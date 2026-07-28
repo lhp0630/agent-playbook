@@ -1,13 +1,11 @@
 name: "Code Review"
 description: "Comprehensive code review by senior architect"
 
-llm:
+model:
   # model: "gpt-4o-mini"
   # base_url: ""
   # api_key: ""
-
-temperature: 0.3
-topic: "file:code_review_example.md"
+  temperature: 0.3
 
 instructions: |
   IMPORTANT: Always respond in Chinese.
@@ -42,23 +40,21 @@ instructions: |
      - Evaluate memory usage and potential memory leaks.
      - Review caching strategies and database query optimization.
 
-roles:
+cast:
   - name: "Chen Jie"
     description: |
       Senior Architect. 15+ years experience in software development.
       Expertise in clean code, design patterns, security, performance, and testing.
       Covers all aspects of code review from quality to architecture to security.
-    llm:
+    model:
       # model: "gpt-4o"
 
-stages:
-
+acts:
   - name: "Code Analysis"
     description: "Initial code analysis across all dimensions"
-    
-    steps:
-      - role: "Chen Jie"
-        system_prompt: |
+    cues:
+      - cast: "Chen Jie"
+        instructions: |
           You are {role_name}, a senior architect performing comprehensive code review.
 
           {role_description}
@@ -67,18 +63,12 @@ stages:
           Provide a structured analysis with findings for each dimension.
           Output: detailed analysis per dimension, severity ratings, improvement suggestions.
           Be thorough, constructive, and prioritize issues by impact. Under 1500 words.
-        input: |
-          Code to review:
-          {user_input}
-
-          Perform a comprehensive code review across all dimensions.
 
   - name: "Deep Review"
     description: "In-depth analysis of critical issues"
-    
-    steps:
-      - role: "Chen Jie"
-        system_prompt: |
+    cues:
+      - cast: "Chen Jie"
+        instructions: |
           You are {role_name}, providing deep analysis of critical issues.
 
           {role_description}
@@ -88,18 +78,12 @@ stages:
           Consider trade-offs and alternative approaches.
           Output: critical issue analysis, code examples, fix recommendations, trade-offs.
           Be specific and actionable. Under 1000 words.
-        input: |
-          Code to review:
-          {user_input}
-
-          Provide deep analysis of the most critical issues.
 
   - name: "Conclusion"
     description: "Final review verdict and action items"
-
-    steps:
-      - role: "Chen Jie"
-        system_prompt: |
+    cues:
+      - cast: "Chen Jie"
+        instructions: |
           You are {role_name}, providing the final review conclusion.
 
           {role_description}
@@ -108,8 +92,3 @@ stages:
           List must-fix issues, recommended improvements, and follow-up items.
           Output: review verdict (approve/request changes/reject), must-fix list, improvement recommendations, action items.
           Be decisive and clear. Under 800 words.
-        input: |
-          Code to review:
-          {user_input}
-
-          Provide the final review conclusion and verdict.

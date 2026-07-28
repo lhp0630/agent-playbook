@@ -7,8 +7,9 @@ agent-playbook is YAML-configured multi-agent workflows powered by pydantic-ai D
 ## Features
 
 - YAML-configured agents on [pydantic-ai](https://ai.pydantic.dev/) + [pydantic-ai-harness](https://github.com/pydantic/pydantic-ai-harness) `DynamicWorkflow`
-- Specialist `roles` become sub-agents (`name`, `description`, `model` from config)
+- Specialist `cast` members become sub-agents (`name`, `description`, `model` from config)
 - Built-in naming, debate, requirement review, and code review agents
+- Web chat UI via `agent.to_web()` (uvicorn)
 
 ## Installation
 
@@ -29,45 +30,38 @@ OPENAI_BASE_URL=https://your-api-endpoint/v1
 OPENAI_API_KEY=sk-xxx
 ```
 
-Run a built-in agent (`-n` selects by name; omit for a random pick):
+Run a built-in playbook (`-n` must match the YAML `name` exactly; omit for a random pick). This starts a web chat UI — type your request in the browser:
 
 ```bash
-agent -n "name generation"
-agent -n "office debate"
-agent -n "requirement review"
-agent -n "code review"
+agent -n "Name Generation"
+agent -n "Office Debate"
+agent -n "Requirement Review"
+agent -n "Code Review"
 ```
 
-Load custom agent configs from a directory:
+Optional listen address via flags (defaults `127.0.0.1:8000`):
 
 ```bash
-agent -n "my flow" -p ./my_flows
+agent -n "Code Review" --host 127.0.0.1 --port 8000
+```
+
+Load custom playbook configs from a directory:
+
+```bash
+agent -n "My Playbook" -p ./my_playbooks
 ```
 
 ## Example
 
-The code review agent reads sample code from `code_review.yaml` and runs a multi-role analysis with fix suggestions:
+Name Generation in the web UI — the orchestrator plans a multi-cast workflow, then returns the result:
 
 ```bash
-agent -n "code review"
+agent -n "Name Generation"
 ```
 
-## Built-in Agents
-
-Config files live in `agent/builtin_agents/`:
-
-| File | Agent name |
-|------|-----------|
-| `naming.yaml` | Name Generation |
-| `debate.yaml` | Office Debate |
-| `requirement_review.yaml` | Requirement Review |
-| `code_review.yaml` | Code Review |
-
-Each YAML supplies the orchestrator `name` / `description` / `llm.model`, plus `roles` that become DynamicWorkflow sub-agents.
-
-## Custom Agents
-
-Write a YAML config with `name`, `description`, `llm`, and `roles`, then load it with `-p` and run with `-n`. Optional `stages` become suggested workflow hints for the orchestrator.
+| | |
+| --- | --- |
+| ![Web UI — workflow planning](./readme_assets/web_1.png) | ![Web UI — final result](./readme_assets/web_2.png) |
 
 ## License
 
