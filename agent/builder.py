@@ -1,6 +1,7 @@
 import re
 
 from pydantic_ai import Agent
+from pydantic_ai.capabilities import WebFetch
 from pydantic_ai_harness.dynamic_workflow import DynamicWorkflow
 
 from .llm import make_model
@@ -80,9 +81,9 @@ def _build_instructions(playbook: PlaybookSpec) -> str:
         act_lines = "\n".join(_build_act_hint(act) for act in playbook.acts)
         prompts.append(f"Suggested workflow acts:\n{act_lines}")
 
-    if playbook.model.max_rounds > 1:
+    if playbook.max_rounds > 1:
         prompts.append(
-            f"When an act is iterative (e.g. debate), run up to {playbook.model.max_rounds} rounds."
+            f"When an act is iterative (e.g. debate), run up to {playbook.max_rounds} rounds."
         )
 
     prompts.append(
@@ -137,10 +138,14 @@ def build_agent(playbook: PlaybookSpec) -> Agent:
             )
         )
 
+    capabilities = [DynamicWorkflow(agents=cast_agents)]
+    if playbook.name == "Code Review":
+        capabilities.insert(0, WebFetch(local=True))
+
     return Agent(
         default_model,
         name=to_identifier(playbook.name),
         description=playbook.description or playbook.name,
         instructions=_build_instructions(playbook),
-        capabilities=[DynamicWorkflow(agents=cast_agents)],
+        capabilities=capabilities,
     )

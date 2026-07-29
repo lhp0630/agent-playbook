@@ -1,5 +1,5 @@
 name: "Name Generation"
-description: "Multi-expert collaborative name selection process"
+description: "多专家协作的起名与筛选流程"
 
 model:
   # model: "gpt-4o-mini"
@@ -8,148 +8,148 @@ model:
   temperature: 0.7
 
 instructions: |
-  IMPORTANT: Always respond in Chinese.
+  重要：始终使用中文回复。
 
 cast:
   - name: "Zhang Wei"
     description: |
-      Historian and Cultural Expert. Deep knowledge of Chinese history, literature, and naming traditions.
-      Expertise in classical Chinese, cultural symbolism, and name etymology.
+      历史与文化专家。深谙中国历史、文学与命名传统。
+      擅长文言、文化象征与名字词源。
     model:
       # model: "gpt-4o"
 
   - name: "Li Na"
     description: |
-      Linguist and Naming Specialist. Expert in phonetics, semantics, and modern naming trends.
-      Expertise in name pronunciation, meaning analysis, and cultural associations.
+      语言与命名专家。精通语音、语义与现代取名趋势。
+      擅长读音、含义分析与文化联想。
     model:
       # model: "gpt-4o"
 
   - name: "Wang Qiang"
     description: |
-      Brand and Trademark Expert. Specializes in brand associations and trademark analysis.
-      Expertise in brand name conflicts, cultural sensitivity, and market perception.
+      品牌与商标专家。专注品牌联想与商标分析。
+      擅长品牌名冲突、文化敏感度与市场观感。
     model:
       # model: "gpt-4o"
 
 acts:
-  - name: "Name Generation"
-    description: "Generate 15 representative names from surname across history"
+  - name: "起名生成"
+    description: "按姓氏生成 15 个跨越历史的代表性名字"
     cues:
       - cast: "Zhang Wei"
         instructions: |
-          You are {role_name}, a historian and cultural expert.
+          你是 {role_name}，历史与文化专家。
 
           {role_description}
 
-          Generate 15 most representative names for the given surname.
-          Consider names from different historical periods (ancient to modern) and different fields (literature, science, art, politics, etc.).
-          Each name should have cultural depth and historical significance.
+          为给定姓氏生成 15 个最具代表性的名字。
+          兼顾不同历史时期（古至今）与不同领域（文学、科学、艺术、政治等）。
+          每个名字应有文化深度与历史意义。
 
-          Output format:
-          1. Name1 - Historical period and significance
-          2. Name2 - Historical period and significance
-          ... (list all 15 names)
+          输出格式：
+          1. 名字1 - 历史时期与意义
+          2. 名字2 - 历史时期与意义
+          ...（列出全部 15 个）
 
-          Be thorough and culturally accurate. Under 800 words.
+          详尽且文化准确。不超过 800 字。
 
-  - name: "Name Selection"
-    description: "Select 5 male and 5 female names, avoid brand conflicts"
+  - name: "名字筛选"
+    description: "选出 5 个男名与 5 个女名，避免品牌冲突"
     cues:
       - cast: "Li Na"
         instructions: |
-          You are {role_name}, a linguist and naming specialist.
+          你是 {role_name}，语言与命名专家。
 
           {role_description}
 
-          From the generated names, select 5 male names and 5 female names.
-          Requirements:
-          - No duplicate names
-          - Names must not be associated with known brands (e.g., "李若宁" would be associated with "李宁" sports brand)
-          - Names should be easy to read and write
-          - Names should have positive meanings
+          从已生成的名字中选出 5 个男名与 5 个女名。
+          要求：
+          - 名字不重复
+          - 不得与知名品牌产生联想（例如「李若宁」易联想到「李宁」运动品牌）
+          - 易读易写
+          - 含义积极正面
 
-          Output format:
-          Male names:
-          1. Name1 - Meaning and reason
-          2. Name2 - Meaning and reason
-          ... (5 male names)
+          输出格式：
+          男名：
+          1. 名字1 - 含义与理由
+          2. 名字2 - 含义与理由
+          ...（5 个男名）
 
-          Female names:
-          1. Name1 - Meaning and reason
-          2. Name2 - Meaning and reason
-          ... (5 female names)
+          女名：
+          1. 名字1 - 含义与理由
+          2. 名字2 - 含义与理由
+          ...（5 个女名）
 
-          Be careful about brand associations. Under 600 words.
+          注意品牌联想。不超过 600 字。
 
-  - name: "Name Scoring"
-    description: "Score names with debate-style reasoning"
+  - name: "名字评分"
+    description: "以辩论式说理为名字打分"
     cues:
       - cast: "Wang Qiang"
         instructions: |
-          You are {role_name}, a brand and trademark expert.
+          你是 {role_name}，品牌与商标专家。
 
           {role_description}
 
-          Score each name from multiple dimensions with debate-style reasoning.
-          Consider: meaning, pronunciation, writing difficulty, cultural depth, modern feel, uniqueness.
+          从多维度为每个名字打分，并用辩论式说理。
+          考虑：含义、读音、书写难度、文化深度、现代感、独特性。
 
-          Output format:
-          Male names scoring:
-          1. Name1: X/10 - Reasoning with context
-          2. Name2: X/10 - Reasoning with context
-          ... (all 5 male names)
+          输出格式：
+          男名评分：
+          1. 名字1: X/10 - 结合语境的理由
+          2. 名字2: X/10 - 结合语境的理由
+          ...（全部 5 个男名）
 
-          Female names scoring:
-          1. Name1: X/10 - Reasoning with context
-          2. Name2: X/10 - Reasoning with context
-          ... (all 5 female names)
+          女名评分：
+          1. 名字1: X/10 - 结合语境的理由
+          2. 名字2: X/10 - 结合语境的理由
+          ...（全部 5 个女名）
 
-          Provide detailed scoring context and reasoning. Under 1000 words.
+          提供充分的评分语境与理由。不超过 1000 字。
 
       - cast: "Li Na"
         instructions: |
-          You are {role_name}, a linguist and naming specialist.
+          你是 {role_name}，语言与命名专家。
 
           {role_description}
 
-          Provide your scoring perspective on the names.
-          Focus on: phonetics, semantics, readability, and cultural appropriateness.
-          Challenge or support the previous scoring with your linguistic expertise.
+          从你的视角为名字评分。
+          聚焦：语音、语义、易读性与文化适宜性。
+          用语言学专长支持或挑战先前评分。
 
-          Output format:
-          Male names scoring:
-          1. Name1: X/10 - Your reasoning
-          2. Name2: X/10 - Your reasoning
-          ... (all 5 male names)
+          输出格式：
+          男名评分：
+          1. 名字1: X/10 - 你的理由
+          2. 名字2: X/10 - 你的理由
+          ...（全部 5 个男名）
 
-          Female names scoring:
-          1. Name1: X/10 - Your reasoning
-          2. Name2: X/10 - Your reasoning
-          ... (all 5 female names)
+          女名评分：
+          1. 名字1: X/10 - 你的理由
+          2. 名字2: X/10 - 你的理由
+          ...（全部 5 个女名）
 
-          Be thorough and provide linguistic analysis. Under 800 words.
+          详尽并给出语言学分析。不超过 800 字。
 
-  - name: "Final Selection"
-    description: "Output final male and female name selection"
+  - name: "最终选定"
+    description: "输出最终男女名各一的选择"
     cues:
       - cast: "Zhang Wei"
         instructions: |
-          You are {role_name}, a historian and cultural expert.
+          你是 {role_name}，历史与文化专家。
 
           {role_description}
 
-          Based on all the scoring and discussion, select the final names.
-          Requirements:
-          - Select ONE male name and ONE female name
-          - Only select if there is clear consensus among all scorers
-          - If no clear consensus exists for a gender, output "(无)"
-          - Provide brief reasoning for the selection
+          基于全部评分与讨论，选定最终名字。
+          要求：
+          - 男名、女名各选一个
+          - 仅在各方评分者有明确共识时选定
+          - 若某性别无明确共识，输出「(无)」
+          - 简要说明选名理由
 
-          Output format (MUST follow exactly):
-          男: [name or 无]
-          女: [name or 无]
+          输出格式（必须严格遵守）：
+          男: [名字或 无]
+          女: [名字或 无]
 
-          选名理由: [brief explanation]
+          选名理由: [简要说明]
 
-          Be decisive and clear. Under 300 words.
+          果断清晰。不超过 300 字。

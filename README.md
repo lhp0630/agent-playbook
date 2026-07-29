@@ -55,13 +55,10 @@ agent -n "My Playbook" -p ./my_playbooks
 
 Name Generation in the web UI — the orchestrator plans a multi-cast workflow, then returns the result:
 
-```bash
-agent -n "Name Generation"
-```
-
-| | |
+| Name Generation | Code Review |
 | --- | --- |
-| ![Web UI — workflow planning](./readme_assets/web_1.png) | ![Web UI — final result](./readme_assets/web_2.png) |
+| ![Naming workflow planning](./readme_assets/naming_1.png) |  |
+| ![Naming final result](./readme_assets/naming_2.png) | |
 
 ## License
 

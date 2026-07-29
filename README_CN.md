@@ -55,13 +55,10 @@ agent -n "My Playbook" -p ./my_playbooks
 
 取名 Agent 的 Web UI：编排器规划多角色工作流，并返回最终结果：
 
-```bash
-agent -n "Name Generation"
-```
-
-| | |
+| Name Generation | Code Review |
 | --- | --- |
-| ![Web UI — workflow planning](./readme_assets/web_1.png) | ![Web UI — final result](./readme_assets/web_2.png) |
+| ![Naming workflow planning](./readme_assets/naming_1.png) |  |
+| ![Naming final result](./readme_assets/naming_2.png) | |
 
 ## License
 

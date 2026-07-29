@@ -1,0 +1,12 @@
+[pytest]
+# Discovery
+pythonpath = ["."]
+testpaths = ["tests", "agent/**/"]
+python_files = ["*tests.py", "test*.py"]
+
+# Environment
+env_files = [".env"]
+
+# Async
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "function"

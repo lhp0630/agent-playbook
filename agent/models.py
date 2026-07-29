@@ -22,9 +22,6 @@ class ModelConfig(BaseModel):
     temperature: float = 0.8
     """Sampling temperature for model calls."""
 
-    max_rounds: int = 1
-    """Suggested max iterative rounds for acts such as debate."""
-
 
 class Cast(BaseModel):
     """One specialist in the playbook cast; becomes a DynamicWorkflow sub-agent."""
@@ -79,6 +76,8 @@ class PlaybookSpec(BaseModel):
     description: str | None = None
     """One-line summary of the playbook purpose."""
 
+    triggers: list[str] | None = None
+
     model: ModelConfig = Field(default_factory=ModelConfig)
     """Default model settings for the orchestrator and cast (unless overridden)."""
 
@@ -90,6 +89,9 @@ class PlaybookSpec(BaseModel):
 
     acts: list[Act] = Field(default_factory=list)
     """Suggested workflow acts used as orchestrator hints."""
+
+    max_rounds: int = 1
+    """Suggested max iterative rounds for acts such as debate."""
 
     @staticmethod
     def from_yaml(path: str | Path) -> "PlaybookSpec":
@@ -128,4 +130,4 @@ class PlaybookSpec(BaseModel):
                 "api_key": member_model.get("api_key", api_key),
             }
 
-        return PlaybookSpec(**kwargs)
+        return PlaybookSpec.model_validate(kwargs)
