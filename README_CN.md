@@ -6,11 +6,8 @@ agent-playbook 是基于 pydantic-ai DynamicWorkflow 与 Agent Skills 的 YAML �
 
 ## 功能
 
-- Playbook 配置位于 [`.agents/`](.agents/)，基于 [pydantic-ai](https://ai.pydantic.dev/) + [pydantic-ai-harness](https://github.com/pydantic/pydantic-ai-harness) `DynamicWorkflow`
-- 每个节点配置 `instructions` 与可选 `skills`（通过 [pydantic-ai-skills](https://github.com/DougTrajano/pydantic-ai-skills) 从 `.agents/skills/` 加载）
-- 内置 `codereview`：拉取 GitHub / GitLab 的 commit、PR/MR，再按第一性原理 → 5-whys → 代码评审执行
-- GitHub 使用 WebFetch；配置 `GITLAB_API_URL` 后，GitLab 走 [mcp-gitlab](https://github.com/zereight/gitlab-mcp)
-- 通过 `agent.to_web()` 提供 Web 聊天界面
+- 在 [`.agents/`](.agents/) 用 YAML 编排多智能体 `DynamicWorkflow` 与 Agent Skills
+- 内置 `code-review`
 
 ## 安装
 
@@ -34,35 +31,34 @@ git submodule update --init --recursive
 复制 `.env.example` 为 `.env`，填入凭证：
 
 ```bash
-OPENAI_MODEL=your-model-name
-OPENAI_BASE_URL=https://your-api-endpoint/v1
-OPENAI_API_KEY=sk-xxx
-
 # 可选 — 启用 GitLab MCP，用于 GitLab 地址
 GITLAB_API_URL=https://gitlab.example.com/api/v4
 GITLAB_PERSONAL_ACCESS_TOKEN=glpat-xxx
 ```
 
-运行 Playbook。粘贴 GitHub commit `.diff` / PR，或 GitLab commit / MR 地址：
+运行 Playbook：
 
 ```bash
 agent
 ```
 
-可选监听地址（默认 `127.0.0.1:8000`）：
-
-```bash
-agent -n codereview --host 127.0.0.1 --port 8000
-```
+访问 `http://127.0.0.1:8000`，粘贴 GitHub PR URL 或 GitLab MR URL。
 
 ## Playbook YAML
 
 | 字段 | 必填 | 说明 |
 | --- | :---: | --- |
-| `name` | ✓ | 唯一 ID，如 `codereview` |
+| `name` | ✓ | 唯一 ID，如 `code-review` |
 | `description` | | 一句话摘要，每次会话根据摘要匹配 Playbook |
 | `instructions` | | orchestrator 运行规程 |
-| `model` | | LLM 配置：`model`、`base_url`、`api_key`、`temperature` 等 |
+| `model_providers` | ✓ | LLM 提供方列表（`name`、`base_url`、`api_key`） |
+| `model_providers[].name` | ✓ | 提供方 ID，如 `openai` |
+| `model_providers[].base_url` | ✓ | API base URL |
+| `model_providers[].api_key` | ✓ | API key |
+| `models` | | 模型列表；省略时回退到 `OPENAI_*` 环境变量 |
+| `models[].name` | ✓ | 模型 ID，如 `gpt-4o-mini` |
+| `models[].model_provider` | ✓ | 对应 `model_providers` 中的 `name` |
+| `model_settings` | | pydantic-ai `ModelSettings`（如 `temperature`） |
 | `mcp_servers` | | MCP 工具列表 |
 | `mcp_servers[].name` | ✓ | MCP 名称，如 `gitlab` |
 | `mcp_servers[].commands` | ✓ | 命令数组，首项为可执行文件 |
@@ -71,7 +67,9 @@ agent -n codereview --host 127.0.0.1 --port 8000
 | `nodes` | ✓ | 工作流节点，按列表顺序执行 |
 | `nodes[].name` | ✓ | 节点名，规范化后作为 `run_workflow` 函数名 |
 | `nodes[].instructions` | | 节点提示词 |
-| `nodes[].skills` | ✓ | Skill 或 URI，如 `https://github.com/anthropics/skills.git` |
+| `nodes[].skills` | ✓ | Skill 名称数组，从 `directories` 中扫描 |
+| `nodes[].models` | | 可选，节点级模型覆盖 |
+| `nodes[].model_settings` | | 可选，节点级 settings 覆盖 |
 
 ## 示例
 
