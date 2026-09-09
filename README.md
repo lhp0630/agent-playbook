@@ -6,11 +6,8 @@ agent-playbook is YAML-configured multi-agent workflows powered by pydantic-ai D
 
 ## Features
 
-- YAML playbooks under [`.agents/`](.agents/) on [pydantic-ai](https://ai.pydantic.dev/) + [pydantic-ai-harness](https://github.com/pydantic/pydantic-ai-harness) `DynamicWorkflow`
-- Each node declares `instructions` and optional `skills` (loaded via [pydantic-ai-skills](https://github.com/DougTrajano/pydantic-ai-skills) from `.agents/skills/`)
-- Built-in `codereview` playbook: fetch a GitHub or GitLab commit/PR/MR URL, then first-principles → 5-whys → code-review
-- GitHub via WebFetch; GitLab via [mcp-gitlab](https://github.com/zereight/gitlab-mcp) when `GITLAB_API_URL` is set
-- Web chat UI via `agent.to_web()`
+- YAML playbooks under [`.agents/`](.agents/): multi-agent `DynamicWorkflow` nodes composed with Agent Skills
+- Built-in `code-review`
 
 ## Installation
 
@@ -34,35 +31,34 @@ Skill packages live under `.agents/skills/` (`first-principles-skill`, `5-whys-s
 Copy `.env.example` to `.env` and set credentials:
 
 ```bash
-OPENAI_MODEL=your-model-name
-OPENAI_BASE_URL=https://your-api-endpoint/v1
-OPENAI_API_KEY=sk-xxx
-
 # Optional — enable GitLab MCP for GitLab URLs
 GITLAB_API_URL=https://gitlab.example.com/api/v4
 GITLAB_PERSONAL_ACCESS_TOKEN=glpat-xxx
 ```
 
-Run a playbook. Paste a GitHub commit `.diff` / PR URL, or a GitLab commit / MR URL:
+Run a playbook:
 
 ```bash
 agent
 ```
 
-Optional listen address (defaults `127.0.0.1:8000`):
-
-```bash
-agent -n codereview --host 127.0.0.1 --port 8000
-```
+Open `http://127.0.0.1:8000` and paste a GitHub PR URL, or a GitLab MR URL.
 
 ## Playbook YAML
 
 | Field | Required | Description |
 | --- | :---: | --- |
-| `name` | ✓ | Unique ID, e.g. `codereview` |
+| `name` | ✓ | Unique ID, e.g. `code-review` |
 | `description` | | One-line summary; used to match a playbook per session |
 | `instructions` | | Orchestrator runbook |
-| `model` | | LLM settings: `model`, `base_url`, `api_key`, `temperature`, etc. |
+| `model_providers` | ✓ | LLM provider list (`name`, `base_url`, `api_key`) |
+| `model_providers[].name` | ✓ | Provider ID, e.g. `openai` |
+| `model_providers[].base_url` | ✓ | API base URL |
+| `model_providers[].api_key` | ✓ | API key |
+| `models` | | Model list; if omitted, falls back to `OPENAI_*` env vars |
+| `models[].name` | ✓ | Model ID, e.g. `gpt-4o-mini` |
+| `models[].model_provider` | ✓ | Provider `name` from `model_providers` |
+| `model_settings` | | pydantic-ai `ModelSettings` (e.g. `temperature`) |
 | `mcp_servers` | | MCP tool list |
 | `mcp_servers[].name` | ✓ | MCP name, e.g. `gitlab` |
 | `mcp_servers[].commands` | ✓ | Command array; first element is the executable |
@@ -71,7 +67,9 @@ agent -n codereview --host 127.0.0.1 --port 8000
 | `nodes` | ✓ | Workflow nodes, executed in list order |
 | `nodes[].name` | ✓ | Node name; normalized for `run_workflow` |
 | `nodes[].instructions` | | Node prompt |
-| `nodes[].skills` | ✓ | Skill names or a URI, e.g. `https://github.com/anthropics/skills.git` |
+| `nodes[].skills` | ✓ | Skill name array, scanned from `directories` |
+| `nodes[].models` | | Optional per-node model override |
+| `nodes[].model_settings` | | Optional per-node settings override |
 
 ## Example
 

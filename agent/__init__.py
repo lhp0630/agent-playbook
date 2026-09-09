@@ -1,19 +1,32 @@
 import os
 import re
 from pathlib import Path
+from typing import TypedDict
 
 from fastmcp.client.transports import StdioTransport
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 from pydantic_ai import Agent
 from pydantic_ai.capabilities import WebFetch
 from pydantic_ai.mcp import MCPToolset
-from pydantic_ai.models import Model
+from pydantic_ai.models import Model, infer_model
 from pydantic_ai.models.openai import OpenAIChatModel
+from pydantic_ai.providers import infer_provider
 from pydantic_ai.providers.openai import OpenAIProvider
 from pydantic_ai.settings import ModelSettings
 from pydantic_ai_harness.dynamic_workflow import DynamicWorkflow
 from pydantic_ai_skills import SkillsCapability
 from yaml import safe_load
+
+
+class ModelProvider(TypedDict):
+    name: str
+    base_url: str
+    api_key: str
+
+
+class ModelEntry(TypedDict):
+    name: str
+    model_provider: str
 
 
 class McpServerSpec(BaseModel):
@@ -26,18 +39,23 @@ class McpServerSpec(BaseModel):
 class PlaybookNodeSpec(BaseModel):
     name: str
     instructions: str = ""
-    model: dict[str, object] | None = None
+    model_settings: ModelSettings | None = None
+    models: list[ModelEntry] | None = None
     skills: list[str]
+    model_config = ConfigDict(arbitrary_types_allowed=True)
 
 
 class PlaybookSpec(BaseModel):
     name: str
     description: str | None = None
     instructions: str | None = None
-    model: dict[str, object] | None = None
+    model_providers: list[ModelProvider]
+    model_settings: ModelSettings | None = Field(default_factory=lambda: ModelSettings())
+    models: list[ModelEntry] | None = None
     mcp_servers: list[McpServerSpec] | None = None
     nodes: list[PlaybookNodeSpec]
     directories: list[str] = Field(default_factory=lambda: [Path(".agents") / "skills"])
+    model_config = ConfigDict(arbitrary_types_allowed=True)
 
     @classmethod
     def from_yaml(cls, path: str | Path) -> "PlaybookSpec":
@@ -49,7 +67,54 @@ class PlaybookSpec(BaseModel):
         return cls.model_validate(spec_dict)
 
 
-# ==================== Build MCP Tools =======================
+# --- build model configuration -----------------------------------
+
+
+def make_agent_models(
+    spec: PlaybookSpec | PlaybookNodeSpec, model_providers: list[ModelProvider]
+) -> list[Model]:
+
+    config_providers = model_providers
+
+    def make_model(model_entry: ModelEntry):
+        model_name = model_entry["name"]
+        model_provider = next(
+            (
+                provider
+                for provider in config_providers
+                if provider["name"] == model_entry["model_provider"]
+            ),
+            None,
+        )
+
+        if not model_provider:
+            return infer_model(model_name)
+
+        def provider_factory(provider: str):
+            if provider in ("openai", "openai-chat", "openai-responses"):
+                return OpenAIProvider(
+                    base_url=model_provider["base_url"], api_key=model_provider["api_key"]
+                )
+
+            return infer_provider(provider)
+
+        return infer_model(model_name, provider_factory)
+
+    config_models = [make_model(model_entry) for model_entry in spec.models] if spec.models else []
+
+    if not config_models:
+        model_name = os.environ.get("OPENAI_MODEL")
+        if model_name:
+            base_url = os.environ.get("OPENAI_BASE_URL", "https://api.openai.com/v1")
+            openai_provider = OpenAIProvider(
+                base_url=base_url, api_key=os.environ.get("OPENAI_API_KEY")
+            )
+            return [OpenAIChatModel(model_name, provider=openai_provider)]
+
+    return config_models
+
+
+# --- build mcp tools ---------------------------------------------
 
 
 def _make_mcp_toolset(mcp_spec: McpServerSpec) -> MCPToolset | None:
@@ -76,34 +141,13 @@ def _make_mcp_tools(pb_spec: PlaybookSpec) -> list[MCPToolset]:
     return mcp_toolsets
 
 
-# ==================== Build Capability ======================
+# --- build capability --------------------------------------------
 
 
 def _build_attach_capability(): ...
 
 
-# ==================== Build LLM Model =======================
-
-
-def _make_model(spec: PlaybookSpec | PlaybookNodeSpec) -> Model:
-    mode_config = spec.model or {}
-
-    model = mode_config.pop("model", None)
-    if not model:
-        model = os.environ.get("OPENAI_MODEL", "gpt-4o-mini")
-
-    base_url = mode_config.pop("base_url", None)
-    if not base_url:
-        base_url = os.environ.get("OPENAI_BASE_URL", "https://api.openai.com/v1")
-
-    api_key = mode_config.pop("api_key", None)
-
-    settings = ModelSettings(**mode_config)
-    provider = OpenAIProvider(base_url=base_url, api_key=api_key)
-    return OpenAIChatModel(model, provider=provider, settings=settings)
-
-
-# ==================== Build Agent ===========================
+# --- build agent -------------------------------------------------
 
 
 def _normalize_name(spec: PlaybookSpec | PlaybookNodeSpec) -> str:
@@ -173,6 +217,9 @@ def make_workflow_agent(pb_spec: PlaybookSpec) -> Agent:
     node_agents: list[Agent] = []
     seen: set[str] = set()
 
+    model_providers = pb_spec.model_providers
+    model_settings = pb_spec.model_settings
+
     for node in pb_spec.nodes:
         normalized_name = _normalize_name(node)
         if normalized_name in seen:
@@ -185,25 +232,27 @@ def make_workflow_agent(pb_spec: PlaybookSpec) -> Agent:
             skill_dirs = _scan_target_skills(node.skills, pb_spec.directories)
             capabilities.append(SkillsCapability(directories=skill_dirs))
 
-        node_agent_model = _make_model(node)
+        node_agent_models = make_agent_models(node, model_providers)
 
         node_agents.append(
             Agent(
-                node_agent_model,
+                model=node_agent_models[0],
                 name=normalized_name,
                 instructions=node.instructions,
                 capabilities=capabilities or None,
+                model_settings=node.model_settings or model_settings,
             )
         )
         seen.add(normalized_name)
 
-    default_model = _make_model(pb_spec)
+    agent_models = make_agent_models(pb_spec, model_providers)
 
     return Agent(
-        default_model,
+        model=agent_models[0],
         name=_normalize_name(pb_spec),
         description=pb_spec.description,
         instructions=_build_instructions(pb_spec),
+        model_settings=model_settings,
         capabilities=[
             WebFetch(local=True),
             DynamicWorkflow(agents=node_agents),
@@ -212,7 +261,7 @@ def make_workflow_agent(pb_spec: PlaybookSpec) -> Agent:
     )
 
 
-__version__ = "0.1.0"
+__version__ = "0.1.1"
 __all__ = [
     "PlaybookSpec",
     "PlaybookNodeSpec",

@@ -1,6 +1,6 @@
 [project]
 name = "agent-playbook"
-version = "0.1.0"
+version = "0.1.1"
 description = "YAML-configured multi-agent workflows powered by pydantic-ai DynamicWorkflow."
 requires-python = ">=3.10"
 dependencies = [
