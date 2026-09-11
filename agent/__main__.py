@@ -1,34 +1,38 @@
+import asyncio
+import os
 import random
 import sys
-from pathlib import Path
+from contextlib import asynccontextmanager
 
 import fire
 import uvicorn
 from dotenv import find_dotenv, load_dotenv
 
-from . import PlaybookSpec, make_workflow_agent
+from . import make_workflow_agent
 
-SKILLS_DIR = Path(".agents")
+env_file = find_dotenv(usecwd=True)
+load_dotenv(env_file)
+
+from ._config_manager import CONFIG_MANAGER  # noqa: E402
 
 
-def _load_playbooks():
-    env_file = find_dotenv(usecwd=True)
-    load_dotenv(env_file)
+def setup_logger(log_level: str = os.getenv("PLAYBOOK_LOG_LEVEL", "INFO")):
+    from logging.config import dictConfig
 
-    file_paths: list[Path] = []
+    from uvicorn.config import LOGGING_CONFIG
 
-    for ext in [".yml", ".yaml"]:
-        file_paths.extend(SKILLS_DIR.glob(f"*{ext}"))
-
-    for path in file_paths:
-        try:
-            yield PlaybookSpec.from_yaml(path)
-        except Exception as e:
-            print(f"Error loading playbook spec {path}: {e}", file=sys.stderr)
+    config_logger = {
+        **LOGGING_CONFIG,
+        "loggers": {
+            **LOGGING_CONFIG["loggers"],
+            __package__: {"handlers": ["default"], "level": log_level, "propagate": False},
+        },
+    }
+    dictConfig(config_logger)
 
 
 def startup_web(name: str | None = None, host: str = "127.0.0.1", port: int = 8000):
-    playbooks = [*_load_playbooks()]
+    playbooks = CONFIG_MANAGER.playbooks
     if not playbooks:
         print("No playbook found.", file=sys.stderr)
         raise SystemExit(1)
@@ -41,6 +45,20 @@ def startup_web(name: str | None = None, host: str = "127.0.0.1", port: int = 80
 
     agent = make_workflow_agent(selected_playbook)
     app = agent.to_web()
+
+    @asynccontextmanager
+    async def lifespan(app):
+        event = asyncio.Event()
+        task = asyncio.create_task(CONFIG_MANAGER.watch_playbooks(event))
+
+        yield
+
+        event.set()
+        await task
+
+    app.router.lifespan_context = lifespan
+
+    setup_logger()
 
     print(f"Serving {selected_playbook.name!r} at http://{host}:{port}")
     uvicorn.run(app, host=host, port=port)
