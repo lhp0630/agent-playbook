@@ -3,24 +3,22 @@ import os
 import random
 import sys
 from contextlib import asynccontextmanager
+from logging.config import dictConfig
 
 import fire
 import uvicorn
 from dotenv import find_dotenv, load_dotenv
+from uvicorn.config import LOGGING_CONFIG
 
-from . import make_workflow_agent
+from .factory import make_workflow_agent
 
 env_file = find_dotenv(usecwd=True)
 load_dotenv(env_file)
 
-from ._config_manager import CONFIG_MANAGER  # noqa: E402
+from .config import CONFIG_MANAGER  # noqa: E402
 
 
 def setup_logger(log_level: str = os.getenv("PLAYBOOK_LOG_LEVEL", "INFO")):
-    from logging.config import dictConfig
-
-    from uvicorn.config import LOGGING_CONFIG
-
     config_logger = {
         **LOGGING_CONFIG,
         "loggers": {
@@ -32,6 +30,7 @@ def setup_logger(log_level: str = os.getenv("PLAYBOOK_LOG_LEVEL", "INFO")):
 
 
 def startup_web(name: str | None = None, host: str = "127.0.0.1", port: int = 8000):
+    # TODO: Add a runtime update mechanism, or remove the live-reload claim and watcher behavior.
     playbooks = CONFIG_MANAGER.playbooks
     if not playbooks:
         print("No playbook found.", file=sys.stderr)
@@ -59,8 +58,6 @@ def startup_web(name: str | None = None, host: str = "127.0.0.1", port: int = 80
     app.router.lifespan_context = lifespan
 
     setup_logger()
-
-    print(f"Serving {selected_playbook.name!r} at http://{host}:{port}")
     uvicorn.run(app, host=host, port=port)
 
 

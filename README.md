@@ -73,6 +73,6 @@ Open `http://127.0.0.1:8000` and paste a GitHub PR URL, or a GitLab MR URL.
 
 ## Example
 
-| GitHub | GitLab | Result |
-| --- | --- | --- |
-| ![Web UI — GitHub](./readme_assets/web_1.png) | ![Web UI — GitLab](./readme_assets/web_gitlab.png) | ![Web UI — result](./readme_assets/web_2.png) |
+| GitHub | GitLab | Result | Issues |
+| --- | --- | --- | --- |
+| ![Web UI — GitHub](./readme_assets/web_1.png) | ![Web UI — GitLab](./readme_assets/web_gitlab.png) | ![Web UI — result](./readme_assets/web_2.png) | ![Web UI - Issues](./readme_assets/web_issues.png) |

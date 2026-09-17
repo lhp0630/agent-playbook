@@ -5,7 +5,7 @@ from pathlib import Path
 
 from watchfiles import awatch
 
-from . import PlaybookSpec
+from .spec import PlaybookSpec
 
 logger = logging.getLogger(__name__)
 
