@@ -5,6 +5,7 @@ instructions: |
   Fetch the user-provided commit/MR/PR URL before running nodes:
   - GitHub URLs (github.com): use WebFetch only.
   - GitLab URLs (gitlab.com or self-hosted GitLab): use gitlab MCP tools only; do not use WebFetch for GitLab.
+  - When calling list_merge_requests, set per_page to 10 (do not use larger values).
   Pass fetched content and prior node outputs into later tasks.
 
 nodes:

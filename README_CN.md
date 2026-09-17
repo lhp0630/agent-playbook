@@ -73,6 +73,6 @@ agent
 
 ## 示例
 
-| GitHub | GitLab | 结果 |
-| --- | --- | --- |
-| ![Web UI — GitHub](./readme_assets/web_1.png) | ![Web UI — GitLab](./readme_assets/web_gitlab.png) | ![Web UI — result](./readme_assets/web_2.png) |
+| GitHub | GitLab | 结果 | Issues |
+| --- | --- | --- | --- |
+| ![Web UI — GitHub](./readme_assets/web_1.png) | ![Web UI — GitLab](./readme_assets/web_gitlab.png) | ![Web UI — result](./readme_assets/web_2.png) | ![Web UI - Issues](./readme_assets/web_issues.png) |
