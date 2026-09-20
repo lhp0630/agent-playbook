@@ -47,13 +47,6 @@ async def convert_office_to_markdown(
     return request_context
 
 
-MARKDOWN_TEMPLATE = """
-{title}
----
-{content}
-"""
-
-
 def _excel_to_markdown(content: BinaryContent) -> str:
     vendor_metadata = content.vendor_metadata
 
@@ -64,8 +57,14 @@ def _excel_to_markdown(content: BinaryContent) -> str:
         elif "markdown_title" in vendor_metadata:
             title = vendor_metadata.pop("markdown_title")
 
-    df = pd.read_excel(io.BytesIO(content.data), engine="calamine")
-    return MARKDOWN_TEMPLATE.format(title=title, content=df.to_markdown())
+    df_sheets = pd.read_excel(io.BytesIO(content.data), engine="calamine", sheet_name=None)
+
+    markdown_parts: list[str] = [f"# {title}"]
+
+    for sheet, df in df_sheets.items():
+        markdown_parts.append(f"## {sheet}\n{df.to_markdown(index=False)}")
+
+    return "\n".join(markdown_parts)
 
 
 hooks = Hooks()
