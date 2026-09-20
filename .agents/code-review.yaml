@@ -3,10 +3,14 @@ description: Review a GitHub/GitLab commit or PR/MR via first principles, 5-whys
 
 instructions: |
   Fetch the user-provided commit/MR/PR URL before running nodes:
-  - GitHub URLs (github.com): use WebFetch only.
-  - GitLab URLs (gitlab.com or self-hosted GitLab): use gitlab MCP tools only; do not use WebFetch for GitLab.
-  - When calling list_merge_requests, set per_page to 10 (do not use larger values).
-  Pass fetched content and prior node outputs into later tasks.
+  - GitHub URLs: use WebFetch only.
+  - GitLab URLs or self-hosted GitLab: use gitlab MCP tools only; do not use WebFetch for GitLab.
+  Pass fetched content and prior node outputs into later tasks so each dependent sub-agent call keeps the relevant context.
+
+  Before any GitLab MCP call, resolve required params:
+  - Parse from the user-provided GitLab URL.
+  - Else use an explicit project/path from the user message.
+  - If still missing: ask the user to provide the project path or numeric project_id; do not call the tool.
 
 nodes:
   - name: first_principles
