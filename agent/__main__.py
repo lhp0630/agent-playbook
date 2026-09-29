@@ -8,9 +8,11 @@ from logging.config import dictConfig
 import fire
 import uvicorn
 from dotenv import find_dotenv, load_dotenv
+from pydantic_ai import Agent
+from pydantic_ai.capabilities import WebFetch
 from uvicorn.config import LOGGING_CONFIG
 
-from .factory import make_workflow_agent
+from agent.harness.playbook._toolset import normalize_name
 
 env_file = find_dotenv(usecwd=True)
 load_dotenv(env_file)
@@ -37,12 +39,24 @@ def startup_web(name: str | None = None, host: str = "127.0.0.1", port: int = 80
         raise SystemExit(1)
 
     selected_playbook = (
-        random.choice(playbooks)
-        if not name
-        else next(spec for spec in playbooks if spec.name == name)
+        random.choice(playbooks) if not name else next(pb for pb in playbooks if pb.name == name)
     )
 
-    agent = make_workflow_agent(selected_playbook)
+    models = selected_playbook.resolve_models()
+    if not models:
+        print("No model configured for playbook.", file=sys.stderr)
+        raise SystemExit(1)
+
+    agent = Agent(
+        model=models[0],
+        name=normalize_name(selected_playbook.name),
+        description=selected_playbook.description,
+        model_settings=selected_playbook.model_settings,
+        capabilities=[
+            WebFetch(local=True),
+            selected_playbook,
+        ],
+    )
     app = agent.to_web()
 
     @asynccontextmanager
