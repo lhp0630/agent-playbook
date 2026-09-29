@@ -4,8 +4,9 @@ import os
 from pathlib import Path
 
 from watchfiles import awatch
+from yaml import safe_load
 
-from .spec import PlaybookSpec
+from agent.harness.playbook import Playbook
 
 logger = logging.getLogger(__name__)
 
@@ -13,7 +14,7 @@ logger = logging.getLogger(__name__)
 class ConfigManager:
     config_path: Path
 
-    _playbooks: list[PlaybookSpec] | None = None
+    _playbooks: list[Playbook] | None = None
 
     def __init__(self):
         self.config_path = Path(os.environ.get("PLAYBOOK_CONFIG_PATH", ".agents"))
@@ -34,12 +35,15 @@ class ConfigManager:
         for ext in [".yml", ".yaml"]:
             files.extend(self.config_path.glob(f"*{ext}"))
 
-        playbooks: list[PlaybookSpec] = []
+        playbooks: list[Playbook] = []
         for path in files:
             try:
-                playbooks.append(PlaybookSpec.from_yaml(path))
+                if not path.is_file():
+                    raise FileNotFoundError()
+                data = safe_load(path.read_bytes())
+                playbooks.append(Playbook.from_spec(**data))
             except Exception as e:
-                f"Error loading playbook config {path}: {e}"
+                logger.error("Error loading playbook config %s: %s", path, e)
 
         self._playbooks = playbooks
 
