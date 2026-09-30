@@ -50,23 +50,23 @@ def test_resolve_models_missing_provider_infers(monkeypatch: pytest.MonkeyPatch)
     # through to infer_model on the bare name (provider credentials from env).
     monkeypatch.setenv("OPENAI_API_KEY", "sk-infer")
     models = resolve_models(
-        [{"name": "openai-chat:qwen", "model_provider": "missing"}],
+        [{"name": "openai-chat:Qwen3.8-27b", "model_provider": "missing"}],
         _PROVIDERS,
     )
     assert len(models) == 1
     assert isinstance(models[0], OpenAIChatModel)
-    assert models[0].model_id == "openai:qwen"
+    assert models[0].model_id == "openai:Qwen3.8-27b"
 
 
 def test_resolve_models_empty_falls_back_to_env(monkeypatch: pytest.MonkeyPatch):
     # With no `models` list, factory falls back to OPENAI_* env vars.
-    monkeypatch.setenv("OPENAI_MODEL", "env-model")
+    monkeypatch.setenv("OPENAI_MODEL", "Qwen3.8-27b")
     monkeypatch.setenv("OPENAI_BASE_URL", "http://env-llm/v1")
     monkeypatch.setenv("OPENAI_API_KEY", "sk-env")
 
     models = resolve_models(None, _PROVIDERS)
     assert len(models) == 1
-    _assert_openai_chat(models[0], "openai:env-model", "http://env-llm/v1/")
+    _assert_openai_chat(models[0], "openai:Qwen3.8-27b", "http://env-llm/v1/")
 
 
 def test_resolve_models_empty_without_env(monkeypatch: pytest.MonkeyPatch):

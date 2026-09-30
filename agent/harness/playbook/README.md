@@ -31,39 +31,38 @@ from pydantic_ai import Agent
 from agent.harness.playbook import Playbook
 
 agent = Agent(
-    'anthropic:claude-sonnet-4-6',
+    'openai:Qwen3.8-27b',
     capabilities=[
         Playbook(
             name='code-review',
             nodes=[],
             mcp_servers=[],
             models={
-                'name': 'anthropic:claude-sonnet-4-6',
+                'name': 'openai-chat:Qwen3.8-27b',
                 'model_provider': 'openai',
             },
-            model_providers=[],
+            model_providers=[
+                {
+                    'name': 'openai',
+                    'base_url': 'https://api.openai.com/v1',
+                    'api_key': '...',
+                }
+            ],
         )
     ],
 )
 ```
 
-Load from YAML:
+Load from YAML (agent-spec):
 
 ```python
-from pathlib import Path
-
 from pydantic_ai import Agent
-from yaml import safe_load
 
 from agent.harness.playbook import Playbook
 
-data = safe_load(Path('.agents/code-review.yaml').read_bytes())
-playbook = Playbook.from_spec(**data)
-agent = Agent(
-    playbook.resolve_models()[0],
-    name=playbook.name,
-    description=playbook.description,
-    capabilities=[playbook],
+agent = Agent.from_file(
+    '.agents/code-review.yaml',
+    custom_capability_types=[Playbook],
 )
 ```
 
