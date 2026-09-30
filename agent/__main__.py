@@ -14,6 +14,7 @@ from pydantic_ai.agent.spec import AgentSpec
 from pydantic_ai.models import Model
 from uvicorn.config import LOGGING_CONFIG
 
+from agent.harness.open_sandbox import OpenSandbox
 from agent.harness.playbook import Playbook
 from agent.harness.playbook._toolset import normalize_models, normalize_name, resolve_models
 
@@ -21,6 +22,8 @@ env_file = find_dotenv(usecwd=True)
 load_dotenv(env_file)
 
 from .config import CONFIG_MANAGER  # noqa: E402
+
+CUSTOM_CAPABILITY_TYPES = [Playbook, OpenSandbox]
 
 
 def setup_logger(log_level: str = os.getenv("PLAYBOOK_LOG_LEVEL", "INFO")):
@@ -68,7 +71,7 @@ def startup_web(host: str = "127.0.0.1", port: int = 8000):
 
     agent = Agent.from_file(
         path,
-        custom_capability_types=[Playbook],
+        custom_capability_types=CUSTOM_CAPABILITY_TYPES,
         model=models[0] if models else None,
         name=normalize_name(spec.name) if spec.name else None,
     )
