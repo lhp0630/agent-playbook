@@ -58,14 +58,14 @@ def test_models_optional_when_absent():
     assert playbook.models is None
 
 
-def test_from_spec_rejects_missing_name():
-    with pytest.raises(TypeError):
-        Playbook.from_spec(
-            **{
-                "model_providers": [],
-                "nodes": [{"name": "n", "skills": []}],
-            }
-        )
+def test_from_spec_name_optional():
+    playbook = Playbook.from_spec(
+        **{
+            "model_providers": [],
+            "nodes": [{"name": "n", "skills": []}],
+        }
+    )
+    assert playbook.name == ""
 
 
 def test_from_spec_rejects_incomplete_node():
@@ -149,10 +149,29 @@ models:
     assert models[0].model_id == "openai:Qwen3.8-27b"
 
 
-def test_load_codereview_playbook() -> None:
+def test_load_codereview_agent_spec(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("OPENAI_API_KEY", "sk-test")
+    monkeypatch.setenv("OPENAI_MODEL", "Qwen3.8-27b")
+    monkeypatch.setenv("GITLAB_API_URL", "https://gitlab.example.com/api/v4")
+    monkeypatch.setenv("GITLAB_PERSONAL_ACCESS_TOKEN", "glpat-x")
+
+    from pydantic_ai import Agent
+    from pydantic_ai.capabilities import CombinedCapability
+
+    from agent.harness.playbook._toolset import resolve_models
+
     path = Path(".agents") / "code-review.yaml"
-    playbook = _load_playbook(path)
-    assert playbook.name == "code-review"
-    assert playbook.nodes
-    assert playbook.mcp_servers
-    assert any(server["name"] == "gitlab" for server in playbook.mcp_servers)
+    agent = Agent.from_file(
+        path,
+        custom_capability_types=[Playbook],
+        model=resolve_models(None, [])[0],
+    )
+    assert agent.name == "code-review"
+    assert agent.description
+
+    root = agent._root_capability
+    assert isinstance(root, CombinedCapability)
+    playbook = next(cap for cap in root.capabilities if isinstance(cap, Playbook))
+    assert len(playbook._nodes) == 3
+    assert playbook._mcp_servers is not None
+    assert any(server.name == "gitlab" for server in playbook._mcp_servers)

@@ -83,6 +83,7 @@ def resolve_models(
 
     config_models = [make_model(model_entry) for model_entry in models] if models else []
 
+    # TODO: Remove OPENAI_* env fallback; callers should pass explicit models.
     if not config_models:
         model_name = os.environ.get("OPENAI_MODEL")
         if model_name:

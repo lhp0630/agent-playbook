@@ -4,15 +4,18 @@ import random
 import sys
 from contextlib import asynccontextmanager
 from logging.config import dictConfig
+from typing import Any
 
 import fire
 import uvicorn
 from dotenv import find_dotenv, load_dotenv
 from pydantic_ai import Agent
-from pydantic_ai.capabilities import WebFetch
+from pydantic_ai.agent.spec import AgentSpec
+from pydantic_ai.models import Model
 from uvicorn.config import LOGGING_CONFIG
 
-from agent.harness.playbook._toolset import normalize_name
+from agent.harness.playbook import Playbook
+from agent.harness.playbook._toolset import normalize_models, normalize_name, resolve_models
 
 env_file = find_dotenv(usecwd=True)
 load_dotenv(env_file)
@@ -31,38 +34,50 @@ def setup_logger(log_level: str = os.getenv("PLAYBOOK_LOG_LEVEL", "INFO")):
     dictConfig(config_logger)
 
 
-def startup_web(name: str | None = None, host: str = "127.0.0.1", port: int = 8000):
+def _resolve_model_from_spec(spec: AgentSpec) -> list[Model[Any]]:
+    """Prefer Playbook-configured models; fall back to OPENAI_* env vars."""
+    # TODO: Read models/model_providers from app_config and pass them into Playbook
+    # instead of pulling them from the playbook capability kwargs / OPENAI_* env.
+    for cap in spec.capabilities:
+        if cap.name != "Playbook":
+            continue
+        kwargs = cap.kwargs
+        models = resolve_models(
+            normalize_models(kwargs.get("models")),
+            kwargs.get("model_providers") or [],
+        )
+        if models:
+            return models
+    return resolve_models(None, [])
+
+
+def startup_web(host: str = "127.0.0.1", port: int = 8000):
     # TODO: Add a runtime update mechanism, or remove the live-reload claim and watcher behavior.
-    playbooks = CONFIG_MANAGER.playbooks
-    if not playbooks:
-        print("No playbook found.", file=sys.stderr)
+    agent_specs = CONFIG_MANAGER.agent_specs
+    if not agent_specs:
+        print("No agent spec found.", file=sys.stderr)
         raise SystemExit(1)
 
-    selected_playbook = (
-        random.choice(playbooks) if not name else next(pb for pb in playbooks if pb.name == name)
-    )
+    # TODO: Routing Agent that classifies user intent and picks a sub-Agent.
+    path, spec = random.choice(agent_specs)
 
-    models = selected_playbook.resolve_models()
-    if not models:
-        print("No model configured for playbook.", file=sys.stderr)
+    models = _resolve_model_from_spec(spec)
+    if not models and not spec.model:
+        print("No model configured for agent.", file=sys.stderr)
         raise SystemExit(1)
 
-    agent = Agent(
-        model=models[0],
-        name=normalize_name(selected_playbook.name),
-        description=selected_playbook.description,
-        model_settings=selected_playbook.model_settings,
-        capabilities=[
-            WebFetch(local=True),
-            selected_playbook,
-        ],
+    agent = Agent.from_file(
+        path,
+        custom_capability_types=[Playbook],
+        model=models[0] if models else None,
+        name=normalize_name(spec.name) if spec.name else None,
     )
-    app = agent.to_web()
+    app = agent.to_web(models=models)
 
     @asynccontextmanager
     async def lifespan(app):
         event = asyncio.Event()
-        task = asyncio.create_task(CONFIG_MANAGER.watch_playbooks(event))
+        task = asyncio.create_task(CONFIG_MANAGER.watch_agent_specs(event))
 
         yield
 

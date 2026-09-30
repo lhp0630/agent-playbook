@@ -21,8 +21,8 @@ except ImportError as _import_error:  # pragma: no cover
         'pip install "pydantic-ai-harness[dynamic-workflow]"'
     ) from _import_error
 
-from ._spec import McpServerSpec, ModelEntry, ModelProvider, PlaybookNodeSpec
-from ._toolset import PlaybookToolset, normalize_models, resolve_models
+from agent.harness.playbook._spec import McpServerSpec, ModelEntry, ModelProvider, PlaybookNodeSpec
+from agent.harness.playbook._toolset import PlaybookToolset, normalize_models, resolve_models
 
 if TYPE_CHECKING:
     from pydantic_ai._instructions import AgentInstructions
@@ -42,22 +42,28 @@ class Playbook(AbstractCapability[AgentDepsT]):
     from agent.harness.playbook import Playbook
 
     agent = Agent(
-        'anthropic:claude-sonnet-4-6',
+        'openai:Qwen3.8-27b',
         capabilities=[
             Playbook(
                 name='code-review',
                 nodes=[],
                 mcp_servers=[],
-                models={'name': 'anthropic:claude-sonnet-4-6', 'model_provider': 'openai'},
-                model_providers=[],
+                models={'name': 'openai-chat:Qwen3.8-27b', 'model_provider': 'openai'},
+                model_providers=[
+                    {
+                        'name': 'openai',
+                        'base_url': 'https://api.openai.com/v1',
+                        'api_key': '...',
+                    }
+                ],
             )
         ],
     )
     ```
     """
 
-    name: str
-    """Unique playbook id, e.g. `code-review`."""
+    name: str = ""
+    """Unique playbook id, e.g. `code-review`. Optional under agent-spec (agent owns `name`)."""
 
     nodes: Sequence[PlaybookNodeSpec] = ()
     """Workflow nodes compiled into DynamicWorkflow sub-agents."""
@@ -104,7 +110,7 @@ class Playbook(AbstractCapability[AgentDepsT]):
     def from_spec(
         cls,
         *,
-        name: str,
+        name: str = "",
         description: str | None = None,
         nodes: Sequence[PlaybookNodeSpec] = (),
         mcp_servers: Sequence[McpServerSpec] | None = None,
@@ -113,6 +119,8 @@ class Playbook(AbstractCapability[AgentDepsT]):
         instructions: str | None = None,
         model_settings: ModelSettings | None = None,
         directories: Sequence[str | Path] | None = None,
+        id: str | None = None,
+        defer_loading: bool = False,
     ) -> Playbook[Any]:
         """Create from YAML/JSON agent-spec fields (or equivalent kwargs)."""
         kwargs: dict[str, Any] = {
@@ -123,6 +131,8 @@ class Playbook(AbstractCapability[AgentDepsT]):
             "model_providers": model_providers,
             "instructions": instructions,
             "description": description,
+            "id": id,
+            "defer_loading": defer_loading,
         }
         if model_settings is not None:
             kwargs["model_settings"] = model_settings

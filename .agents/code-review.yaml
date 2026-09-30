@@ -1,48 +1,51 @@
 name: code-review
 description: Review a GitHub/GitLab commit or PR/MR via first principles, 5-whys, then code review
 
-instructions: |
-  Fetch the user-provided commit/MR/PR URL before running nodes:
-  - GitHub URLs: use WebFetch only.
-  - GitLab URLs or self-hosted GitLab: use gitlab MCP tools only; do not use WebFetch for GitLab.
-  Pass fetched content and prior node outputs into later tasks so each dependent sub-agent call keeps the relevant context.
+capabilities:
+  - WebFetch: {local: true}
+  - Playbook:
+      instructions: |
+        Fetch the user-provided commit/MR/PR URL before running nodes:
+        - GitHub URLs: use WebFetch only.
+        - GitLab URLs or self-hosted GitLab: use gitlab MCP tools only; do not use WebFetch for GitLab.
+        Pass fetched content and prior node outputs into later tasks so each dependent sub-agent call keeps the relevant context.
 
-  Before any GitLab MCP call, resolve required params:
-  - Parse from the user-provided GitLab URL.
-  - Else use an explicit project/path from the user message.
-  - If still missing: ask the user to provide the project path or numeric project_id; do not call the tool.
+        Before any GitLab MCP call, resolve required params:
+        - Parse from the user-provided GitLab URL.
+        - Else use an explicit project/path from the user message.
+        - If still missing: ask the user to provide the project path or numeric project_id; do not call the tool.
 
-nodes:
-  - name: first_principles
-    instructions: Load and apply the first-principles-skill. Base your analysis on the fetched diff/PR content and any prior context in the task. State whether the change should be adopted and why.
-    skills: ["first-principles-skill"]
-  - name: five_whys
-    instructions: Load and apply the 5-whys-skill. Dig into the implementation rationale behind the change, using the fetched content and the first-principles analysis from prior steps.
-    skills: ["5-whys-skill"]
-  - name: code_review
-    instructions: Load and apply the code-review-skill. Produce a concrete review of the fetched diff/PR, incorporating insights from first-principles and 5-whys analysis when available.
-    skills: ["code-review-skill"]
+      nodes:
+        - name: first_principles
+          instructions: Load and apply the first-principles-skill. Base your analysis on the fetched diff/PR content and any prior context in the task. State whether the change should be adopted and why.
+          skills: ["first-principles-skill"]
+        - name: five_whys
+          instructions: Load and apply the 5-whys-skill. Dig into the implementation rationale behind the change, using the fetched content and the first-principles analysis from prior steps.
+          skills: ["5-whys-skill"]
+        - name: code_review
+          instructions: Load and apply the code-review-skill. Produce a concrete review of the fetched diff/PR, incorporating insights from first-principles and 5-whys analysis when available.
+          skills: ["code-review-skill"]
 
-mcp_servers:
-  - name: gitlab
-    commands:
-      [
-        "npx",
-        "-y",
-        "--registry=https://registry.npmmirror.com",
-        "@zereight/mcp-gitlab",
-      ]
-    env_vars: [GITLAB_API_URL, GITLAB_PERSONAL_ACCESS_TOKEN]
+      mcp_servers:
+        - name: gitlab
+          commands:
+            [
+              "npx",
+              "-y",
+              "--registry=https://registry.npmmirror.com",
+              "@zereight/mcp-gitlab",
+            ]
+          env_vars: [GITLAB_API_URL, GITLAB_PERSONAL_ACCESS_TOKEN]
 
-# model_providers:
-#   - name: openai
-#     base_url: https://api.openai.com/v1
-#     api_key: sk-z
-model_providers: []
+      # model_providers:
+      #   - name: openai
+      #     base_url: https://api.openai.com/v1
+      #     api_key: sk-z
+      model_providers: []
 
-# models:
-#   - name: openai-chat:gpt-4o-mini
-#     model_provider: openai
+      # models:
+      #   - name: openai-chat:Qwen3.8-27b
+      #     model_provider: openai
 
-model_settings:
-  temperature: 0.3
+      model_settings:
+        temperature: 0.3
