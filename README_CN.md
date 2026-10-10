@@ -6,8 +6,8 @@ agent-playbook 将 YAML Agent Spec 封装为基于 pydantic-ai [`Capability`](ht
 
 ## 功能
 
-- **`Playbook` Capability**（[`agent.harness.playbook`](agent/harness/playbook/)）：通过 `Agent(..., capabilities=[Playbook(...)])` 挂载，或在 Agent Spec YAML 中声明
-- **`OpenSandbox` Capability**（[`agent.harness.open_sandbox`](agent/harness/open_sandbox/)）：在隔离容器中提供 shell / 文件工具（功能对齐 `pydantic_ai_harness.modal_sandbox`）
+- **`Playbook` Capability**（[`harness.playbook`](src/harness/playbook/)）：通过 `Agent(..., capabilities=[Playbook(...)])` 挂载，或在 Agent Spec YAML 中声明
+- **`OpenSandbox` Capability**（[`harness.open_sandbox`](src/harness/open_sandbox/)）：在隔离容器中提供 shell / 文件工具（功能对齐 `pydantic_ai_harness.modal_sandbox`）
 - 在 [`.agents/`](.agents/) 用声明式 Agent Spec，经 `Agent.from_file(..., custom_capability_types=[Playbook, OpenSandbox])` 加载
 - 内置 `code-review`（第一性原理 → 5 Whys → 代码审查），支持 GitHub WebFetch 与 GitLab MCP
 
@@ -17,8 +17,10 @@ Python 3.10+，依赖管理使用 [uv](https://docs.astral.sh/uv/)（已包含 `
 
 ```bash
 git clone --recurse-submodules https://github.com/lhp0630/agent-playbook.git && cd agent-playbook
-uv sync --all-groups
+uv sync --all-groups --extra agent
 ```
+
+`--extra agent` 会安装服务端依赖（`fire`、`uvicorn` 等）。可复用库在 `src/harness/` 的 `harness` 包；CLI/Web 应用在 `src/agent/` 的 `agent` 包。
 
 若已克隆但未拉取子模块：
 
@@ -42,7 +44,7 @@ OPENAI_API_KEY=...
 GITLAB_API_URL=https://gitlab.example.com/api/v4
 GITLAB_PERSONAL_ACCESS_TOKEN=glpat-xxx
 
-# 可选 — OpenSandbox 服务，用于 agent.harness.open_sandbox.OpenSandbox
+# 可选 — OpenSandbox 服务，用于 harness.open_sandbox.OpenSandbox
 OPEN_SANDBOX_API_KEY=...
 OPEN_SANDBOX_DOMAIN=localhost:8080
 ```
@@ -57,12 +59,12 @@ agent
 
 ## 编程接入
 
-从子模块导入（顶层 `agent` 不再导出 `Playbook` / `OpenSandbox`）：
+从 `harness` 导入 Capability（`agent` 包仅作为服务入口）：
 
 ```python
 from pydantic_ai import Agent
 
-from agent.harness.playbook import Playbook
+from harness.playbook import Playbook
 
 agent = Agent.from_file(
     '.agents/code-review.yaml',
@@ -74,7 +76,7 @@ agent = Agent.from_file(
 
 ```python
 from pydantic_ai import Agent
-from agent.harness.playbook import Playbook
+from harness.playbook import Playbook
 
 agent = Agent(
     'openai:Qwen3.8-27b',
@@ -96,13 +98,13 @@ agent = Agent(
 )
 ```
 
-更多说明见 [`agent/harness/playbook/README.md`](agent/harness/playbook/README.md)。
+更多说明见 [`src/harness/playbook/README.md`](src/harness/playbook/README.md)。
 
 ### OpenSandbox
 
 ```python
 from pydantic_ai import Agent
-from agent.harness.open_sandbox import OpenSandbox
+from harness.open_sandbox import OpenSandbox
 
 agent = Agent(
     'openai:Qwen3.8-27b',
@@ -110,7 +112,7 @@ agent = Agent(
 )
 ```
 
-工具、生命周期模式与 Agent Spec YAML 见 [`agent/harness/open_sandbox/README.md`](agent/harness/open_sandbox/README.md)。
+工具、生命周期模式与 Agent Spec YAML 见 [`src/harness/open_sandbox/README.md`](src/harness/open_sandbox/README.md)。
 
 ## 示例
 

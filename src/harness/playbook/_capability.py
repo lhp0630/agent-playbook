@@ -21,8 +21,8 @@ except ImportError as _import_error:  # pragma: no cover
         'pip install "pydantic-ai-harness[dynamic-workflow]"'
     ) from _import_error
 
-from agent.harness.playbook._spec import McpServerSpec, ModelEntry, ModelProvider, PlaybookNodeSpec
-from agent.harness.playbook._toolset import PlaybookToolset, normalize_models, resolve_models
+from harness.playbook._spec import McpServerSpec, ModelEntry, ModelProvider, PlaybookNodeSpec
+from harness.playbook._toolset import PlaybookToolset, normalize_models, resolve_models
 
 if TYPE_CHECKING:
     from pydantic_ai._instructions import AgentInstructions
@@ -35,11 +35,11 @@ class Playbook(AbstractCapability[AgentDepsT]):
     Builds named sub-agents from `nodes` (with optional skills) and exposes them
     through [`DynamicWorkflow`][pydantic_ai_harness.dynamic_workflow.DynamicWorkflow]
     plus any configured MCP servers, via
-    [`PlaybookToolset`][agent.harness.playbook.PlaybookToolset].
+    [`PlaybookToolset`][harness.playbook.PlaybookToolset].
 
     ```python
     from pydantic_ai import Agent
-    from agent.harness.playbook import Playbook
+    from harness.playbook import Playbook
 
     agent = Agent(
         'openai:Qwen3.8-27b',

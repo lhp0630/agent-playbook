@@ -4,7 +4,7 @@ from types import SimpleNamespace
 
 import pytest
 
-from agent.harness.open_sandbox._session import (
+from harness.open_sandbox._session import (
     OpenSandboxSession,
     _classify_execution,
     _tail_bytes_text,

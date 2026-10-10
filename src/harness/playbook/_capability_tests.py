@@ -6,7 +6,7 @@ import pytest
 from pydantic import ValidationError
 from yaml import safe_load
 
-from agent.harness.playbook import Playbook
+from harness.playbook import Playbook
 
 # Shared provider + minimal playbook skeleton: every test configures one local
 # `default` provider, so it lives here once and the tests only supply extras.
@@ -158,7 +158,7 @@ def test_load_codereview_agent_spec(monkeypatch: pytest.MonkeyPatch) -> None:
     from pydantic_ai import Agent
     from pydantic_ai.capabilities import CombinedCapability
 
-    from agent.harness.playbook._toolset import resolve_models
+    from harness.playbook._toolset import resolve_models
 
     path = Path(".agents") / "code-review.yaml"
     agent = Agent.from_file(

@@ -3,7 +3,7 @@
 import pytest
 from pydantic_ai.exceptions import ModelRetry
 
-from agent.harness.open_sandbox._tool_output import (
+from harness.open_sandbox._tool_output import (
     guard_read_size,
     render_file_window,
     truncate_output,

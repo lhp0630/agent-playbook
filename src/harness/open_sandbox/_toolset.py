@@ -13,12 +13,12 @@ from pydantic_ai.tools import AgentDepsT
 from pydantic_ai.toolsets import AbstractToolset, FunctionToolset
 from typing_extensions import Self
 
-from agent.harness.open_sandbox._session import (
+from harness.open_sandbox._session import (
     OpenSandboxError,
     OpenSandboxSession,
     OpenSandboxTerminalError,
 )
-from agent.harness.open_sandbox._tool_output import (
+from harness.open_sandbox._tool_output import (
     guard_read_size,
     render_file_window,
     truncate_output,

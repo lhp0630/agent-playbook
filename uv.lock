@@ -17,17 +17,22 @@ name = "agent-playbook"
 version = "0.1.1"
 source = { editable = "." }
 dependencies = [
-    { name = "fire" },
-    { name = "pandas", version = "2.3.3", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
-    { name = "pandas", version = "3.0.5", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11'" },
     { name = "pydantic" },
     { name = "pydantic-ai-harness", extra = ["dynamic-workflow"] },
     { name = "pydantic-ai-skills", extra = ["opensandbox"] },
     { name = "pydantic-ai-slim", extra = ["mcp", "openai", "web", "web-fetch"] },
+    { name = "pyyaml" },
+]
+
+[package.optional-dependencies]
+agent = [
+    { name = "fire" },
+    { name = "pandas", version = "2.3.3", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
+    { name = "pandas", version = "3.0.5", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11'" },
     { name = "python-calamine" },
     { name = "python-dotenv" },
-    { name = "pyyaml" },
     { name = "tabulate" },
+    { name = "uvicorn" },
     { name = "watchfiles" },
 ]
 
@@ -40,18 +45,20 @@ dev = [
 
 [package.metadata]
 requires-dist = [
-    { name = "fire", specifier = ">=0.7" },
-    { name = "pandas", specifier = ">=2.3.3" },
+    { name = "fire", marker = "extra == 'agent'", specifier = ">=0.7" },
+    { name = "pandas", marker = "extra == 'agent'", specifier = ">=2.3.3" },
     { name = "pydantic", specifier = ">=2.0" },
     { name = "pydantic-ai-harness", extras = ["dynamic-workflow"], specifier = ">=0.11.0" },
     { name = "pydantic-ai-skills", extras = ["opensandbox"], specifier = ">=1.4.0" },
     { name = "pydantic-ai-slim", extras = ["fastmcp", "mcp", "openai", "web", "web-fetch"], specifier = ">=2.18.0" },
-    { name = "python-calamine", specifier = ">=0.8.2" },
-    { name = "python-dotenv", specifier = ">=1.0" },
+    { name = "python-calamine", marker = "extra == 'agent'", specifier = ">=0.8.2" },
+    { name = "python-dotenv", marker = "extra == 'agent'", specifier = ">=1.0" },
     { name = "pyyaml", specifier = ">=6.0" },
-    { name = "tabulate", specifier = ">=0.10.0" },
-    { name = "watchfiles", specifier = ">=1.2.0" },
+    { name = "tabulate", marker = "extra == 'agent'", specifier = ">=0.10.0" },
+    { name = "uvicorn", marker = "extra == 'agent'", specifier = ">=0.30" },
+    { name = "watchfiles", marker = "extra == 'agent'", specifier = ">=1.2.0" },
 ]
+provides-extras = ["agent"]
 
 [package.metadata.requires-dev]
 dev = [

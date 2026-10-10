@@ -6,8 +6,8 @@ applications that need to share a caller-owned sandbox across runs. The model-fa
 toolset remains an implementation detail of the capability.
 """
 
-from agent.harness.open_sandbox._capability import OpenSandbox
-from agent.harness.open_sandbox._session import (
+from harness.open_sandbox._capability import OpenSandbox
+from harness.open_sandbox._session import (
     OpenSandboxAuthError,
     OpenSandboxError,
     OpenSandboxExecResult,

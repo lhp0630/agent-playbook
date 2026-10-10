@@ -2,8 +2,8 @@
 
 import pytest
 
-from agent.harness.open_sandbox import OpenSandbox, OpenSandboxSession
-from agent.harness.open_sandbox._session import DEFAULT_IMAGE, DEFAULT_SANDBOX_TIMEOUT
+from harness.open_sandbox import OpenSandbox, OpenSandboxSession
+from harness.open_sandbox._session import DEFAULT_IMAGE, DEFAULT_SANDBOX_TIMEOUT
 
 
 def test_owned_defaults_and_instructions():
@@ -57,7 +57,7 @@ def test_rejects_non_positive_limits():
 
 
 def test_get_toolset_builds_open_sandbox_toolset():
-    from agent.harness.open_sandbox._toolset import OpenSandboxToolset
+    from harness.open_sandbox._toolset import OpenSandboxToolset
 
     toolset = OpenSandbox().get_toolset()
     assert isinstance(toolset, OpenSandboxToolset)
