@@ -14,9 +14,9 @@ from pydantic_ai.agent.spec import AgentSpec
 from pydantic_ai.models import Model
 from uvicorn.config import LOGGING_CONFIG
 
-from agent.harness.open_sandbox import OpenSandbox
-from agent.harness.playbook import Playbook
-from agent.harness.playbook._toolset import normalize_models, normalize_name, resolve_models
+from harness.open_sandbox import OpenSandbox
+from harness.playbook import Playbook
+from harness.playbook._toolset import normalize_models, normalize_name, resolve_models
 
 env_file = find_dotenv(usecwd=True)
 load_dotenv(env_file)

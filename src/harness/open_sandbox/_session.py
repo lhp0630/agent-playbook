@@ -428,8 +428,6 @@ def _classify_execution(
         value = getattr(error, "value", "") or ""
         error_note = f"{name}: {value}".strip(": ") if name or value else str(error)
 
-    timed_out = deadline is not None and (
-        exit_code in (-1, 137) or _is_timeout_error(error)
-    )
+    timed_out = deadline is not None and (exit_code in (-1, 137) or _is_timeout_error(error))
     returncode = 1 if exit_code is None or exit_code < 0 else exit_code
     return returncode, timed_out, error_note

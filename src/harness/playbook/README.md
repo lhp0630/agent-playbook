@@ -1,10 +1,10 @@
 # Playbook
 
 > [!NOTE]
-> Import this capability from its submodule -- there is no top-level `agent` re-export of `Playbook`:
+> Import this capability from the `harness` package:
 >
 > ```python
-> from agent.harness.playbook import Playbook
+> from harness.playbook import Playbook
 > ```
 
 Turn a YAML-shaped playbook (named nodes, skills, MCP servers, model providers) into a single
@@ -28,7 +28,7 @@ attaches configured MCP servers -- all via [`PlaybookToolset`](./_toolset.py).
 
 ```python
 from pydantic_ai import Agent
-from agent.harness.playbook import Playbook
+from harness.playbook import Playbook
 
 agent = Agent(
     'openai:Qwen3.8-27b',
@@ -58,7 +58,7 @@ Load from YAML (agent-spec):
 ```python
 from pydantic_ai import Agent
 
-from agent.harness.playbook import Playbook
+from harness.playbook import Playbook
 
 agent = Agent.from_file(
     '.agents/code-review.yaml',
@@ -76,7 +76,7 @@ agent = Agent.from_file(
 ## Configuration
 
 ```python
-from agent.harness.playbook import Playbook
+from harness.playbook import Playbook
 
 Playbook(
     name='code-review',           # unique playbook id

@@ -21,7 +21,7 @@ from pydantic_ai.toolsets import AbstractToolset, CombinedToolset, FunctionTools
 from pydantic_ai_harness.dynamic_workflow import DynamicWorkflow
 from pydantic_ai_skills import SkillsCapability
 
-from agent.harness.playbook._spec import (
+from harness.playbook._spec import (
     McpServerSpec,
     ModelEntry,
     ModelProvider,

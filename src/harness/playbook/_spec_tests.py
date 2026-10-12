@@ -3,7 +3,7 @@
 import pytest
 from pydantic import ValidationError
 
-from agent.harness.playbook._spec import McpServerSpec, PlaybookNodeSpec
+from harness.playbook._spec import McpServerSpec, PlaybookNodeSpec
 
 
 def test_playbook_node_requires_name():

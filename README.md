@@ -6,8 +6,8 @@ agent-playbook turns YAML agent specs into a pydantic-ai [`Capability`](https://
 
 ## Features
 
-- **`Playbook` capability** under [`agent.harness.playbook`](agent/harness/playbook/): attach with `Agent(..., capabilities=[Playbook(...)])` or declare it in an agent-spec YAML
-- **`OpenSandbox` capability** under [`agent.harness.open_sandbox`](agent/harness/open_sandbox/): shell + file tools in an isolated container (aligned with `pydantic_ai_harness.modal_sandbox`)
+- **`Playbook` capability** under [`harness.playbook`](src/harness/playbook/): attach with `Agent(..., capabilities=[Playbook(...)])` or declare it in an agent-spec YAML
+- **`OpenSandbox` capability** under [`harness.open_sandbox`](src/harness/open_sandbox/): shell + file tools in an isolated container (aligned with `pydantic_ai_harness.modal_sandbox`)
 - Declarative agent specs under [`.agents/`](.agents/): loaded via `Agent.from_file(..., custom_capability_types=[Playbook, OpenSandbox])`
 - Built-in `code-review` (first principles → 5-whys → code review), with GitHub WebFetch and GitLab MCP
 
@@ -17,8 +17,10 @@ Python 3.10+. Uses [uv](https://docs.astral.sh/uv/) for dependencies (includes `
 
 ```bash
 git clone --recurse-submodules https://github.com/lhp0630/agent-playbook.git && cd agent-playbook
-uv sync --all-groups
+uv sync --all-groups --extra agent
 ```
+
+`--extra agent` installs the server extras (`fire`, `uvicorn`, …). The reusable lib is the `harness` package under `src/harness/`; the CLI/web app is `agent` under `src/agent/`.
 
 If you already cloned without submodules:
 
@@ -42,7 +44,7 @@ OPENAI_API_KEY=...
 GITLAB_API_URL=https://gitlab.example.com/api/v4
 GITLAB_PERSONAL_ACCESS_TOKEN=glpat-xxx
 
-# Optional — OpenSandbox server for agent.harness.open_sandbox.OpenSandbox
+# Optional — OpenSandbox server for harness.open_sandbox.OpenSandbox
 OPEN_SANDBOX_API_KEY=...
 OPEN_SANDBOX_DOMAIN=localhost:8080
 ```
@@ -57,12 +59,12 @@ Open `http://127.0.0.1:8000` and paste a GitHub PR URL, or a GitLab MR/issue URL
 
 ## Programmatic usage
 
-Import from the submodule (no top-level `agent` re-export of `Playbook` / `OpenSandbox`):
+Import capabilities from `harness` (the `agent` package is the server entrypoint only):
 
 ```python
 from pydantic_ai import Agent
 
-from agent.harness.playbook import Playbook
+from harness.playbook import Playbook
 
 agent = Agent.from_file(
     '.agents/code-review.yaml',
@@ -74,7 +76,7 @@ Or construct the capability in code:
 
 ```python
 from pydantic_ai import Agent
-from agent.harness.playbook import Playbook
+from harness.playbook import Playbook
 
 agent = Agent(
     'openai:Qwen3.8-27b',
@@ -96,13 +98,13 @@ agent = Agent(
 )
 ```
 
-See [`agent/harness/playbook/README.md`](agent/harness/playbook/README.md) for Playbook details.
+See [`src/harness/playbook/README.md`](src/harness/playbook/README.md) for Playbook details.
 
 ### OpenSandbox
 
 ```python
 from pydantic_ai import Agent
-from agent.harness.open_sandbox import OpenSandbox
+from harness.open_sandbox import OpenSandbox
 
 agent = Agent(
     'openai:Qwen3.8-27b',
@@ -110,7 +112,7 @@ agent = Agent(
 )
 ```
 
-See [`agent/harness/open_sandbox/README.md`](agent/harness/open_sandbox/README.md) for tools, lifetime modes, and agent-spec YAML.
+See [`src/harness/open_sandbox/README.md`](src/harness/open_sandbox/README.md) for tools, lifetime modes, and agent-spec YAML.
 
 ## Example
 

@@ -6,8 +6,8 @@ import pytest
 from pydantic_ai.models import Model as AgentModel
 from pydantic_ai.models.openai import OpenAIChatModel
 
-from agent.harness.playbook._spec import PlaybookNodeSpec
-from agent.harness.playbook._toolset import (
+from harness.playbook._spec import PlaybookNodeSpec
+from harness.playbook._toolset import (
     _scan_skills,
     build_node_agents,
     resolve_models,

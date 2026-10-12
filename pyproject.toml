@@ -6,12 +6,17 @@ requires-python = ">=3.10"
 dependencies = [
     "pydantic>=2.0",
     "pyyaml>=6.0",
-    "python-dotenv>=1.0",
-    "fire>=0.7",
     "pydantic-ai-slim[fastmcp,mcp,openai,web,web-fetch]>=2.18.0",
     "pydantic-ai-harness[dynamic-workflow]>=0.11.0",
     "pydantic-ai-skills[opensandbox]>=1.4.0",
+]
+
+[project.optional-dependencies]
+agent = [
+    "fire>=0.7",
+    "uvicorn>=0.30",
     "watchfiles>=1.2.0",
+    "python-dotenv>=1.0",
     "pandas>=2.3.3",
     "python-calamine>=0.8.2",
     "tabulate>=0.10.0",
@@ -29,7 +34,7 @@ asyncio_mode = "auto"
 python_files = ["test_*.py", "*_tests.py"]
 
 [tool.hatch.build.targets.wheel]
-packages = ["agent"]
+packages = ["src/harness", "src/agent"]
 
 [project.scripts]
 agent = "agent.__main__:main"

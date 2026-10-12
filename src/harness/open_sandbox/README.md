@@ -13,10 +13,10 @@ The capability destroys it when the run ends. You can also attach an existing
 sandbox or reuse one across several runs.
 
 > [!NOTE]
-> Import from the submodule -- there is no top-level re-export:
+> Import from the `harness` package:
 >
 > ```python
-> from agent.harness.open_sandbox import OpenSandbox
+> from harness.open_sandbox import OpenSandbox
 > ```
 
 ## Quick start
@@ -34,7 +34,7 @@ Add `OpenSandbox` to the agent:
 
 ```python
 from pydantic_ai import Agent
-from agent.harness.open_sandbox import OpenSandbox
+from harness.open_sandbox import OpenSandbox
 
 agent = Agent(
     'openai:Qwen3.8-27b',
@@ -85,7 +85,7 @@ capabilities:
 
 ```python
 from pydantic_ai import Agent
-from agent.harness.open_sandbox import OpenSandbox
+from harness.open_sandbox import OpenSandbox
 
 agent = Agent.from_file(
     'agent.yaml',
