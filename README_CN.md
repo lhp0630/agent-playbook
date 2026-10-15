@@ -79,13 +79,13 @@ from pydantic_ai import Agent
 from harness.playbook import Playbook
 
 agent = Agent(
-    'openai:Qwen3.8-27b',
+    'openai:ornith:35b',
     capabilities=[
         Playbook(
             name='code-review',
             nodes=[],
             mcp_servers=[],
-            models={'name': 'openai-chat:Qwen3.8-27b', 'model_provider': 'openai'},
+            models={'name': 'openai-chat:ornith:35b', 'model_provider': 'openai'},
             model_providers=[
                 {
                     'name': 'openai',
@@ -107,7 +107,7 @@ from pydantic_ai import Agent
 from harness.open_sandbox import OpenSandbox
 
 agent = Agent(
-    'openai:Qwen3.8-27b',
+    'openai:ornith:35b',
     capabilities=[OpenSandbox()],
 )
 ```

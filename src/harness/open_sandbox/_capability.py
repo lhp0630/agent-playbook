@@ -62,7 +62,7 @@ class OpenSandbox(AbstractCapability[AgentDepsT]):
     from pydantic_ai import Agent
     from harness.open_sandbox import OpenSandbox
 
-    agent = Agent('openai:Qwen3.8-27b', capabilities=[OpenSandbox()])
+    agent = Agent('openai:ornith:35b', capabilities=[OpenSandbox()])
     result = agent.run_sync('Write a Python script that prints the first 10 primes and run it.')
     print(result.output)
     ```
