@@ -43,12 +43,12 @@ def test_from_spec_loads_models(tmp_path: Path):
     path.write_text(
         _BASE
         + "models:\n"
-        + "  - name: openai-chat:Qwen3.8-27b\n"
+        + "  - name: openai-chat:ornith:35b\n"
         + "    model_provider: default\n"
     )
     playbook = _load_playbook(path)
     assert playbook.models is not None
-    assert playbook.models[0]["name"] == "openai-chat:Qwen3.8-27b"
+    assert playbook.models[0]["name"] == "openai-chat:ornith:35b"
     assert playbook.models[0]["model_provider"] == "default"
     assert playbook.model_providers[0]["name"] == "default"
 
@@ -140,18 +140,18 @@ def test_resolve_models_delegates_to_providers():
     playbook = _make_playbook(
         """
 models:
-  - name: openai-chat:Qwen3.8-27b
+  - name: openai-chat:ornith:35b
     model_provider: default
 """
     )
     models = playbook.resolve_models()
     assert len(models) == 1
-    assert models[0].model_id == "openai:Qwen3.8-27b"
+    assert models[0].model_id == "openai:ornith:35b"
 
 
 def test_load_codereview_agent_spec(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("OPENAI_API_KEY", "sk-test")
-    monkeypatch.setenv("OPENAI_MODEL", "Qwen3.8-27b")
+    monkeypatch.setenv("OPENAI_MODEL", "ornith:35b")
     monkeypatch.setenv("GITLAB_API_URL", "https://gitlab.example.com/api/v4")
     monkeypatch.setenv("GITLAB_PERSONAL_ACCESS_TOKEN", "glpat-x")
 

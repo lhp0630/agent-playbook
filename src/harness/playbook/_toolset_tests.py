@@ -35,13 +35,13 @@ def test_resolve_models_uses_configured_provider():
     # (base_url from playbook YAML, not an env var).
     models = resolve_models(
         [
-            {"name": "openai-chat:Qwen3.8-27b", "model_provider": "default"},
+            {"name": "openai-chat:ornith:35b", "model_provider": "default"},
             {"name": "openai-chat:other", "model_provider": "default"},
         ],
         _PROVIDERS,
     )
     assert len(models) == 2
-    _assert_openai_chat(models[0], "openai:Qwen3.8-27b", "http://llm/v1/")
+    _assert_openai_chat(models[0], "openai:ornith:35b", "http://llm/v1/")
     _assert_openai_chat(models[1], "openai:other", "http://llm/v1/")
 
 
@@ -50,23 +50,23 @@ def test_resolve_models_missing_provider_infers(monkeypatch: pytest.MonkeyPatch)
     # through to infer_model on the bare name (provider credentials from env).
     monkeypatch.setenv("OPENAI_API_KEY", "sk-infer")
     models = resolve_models(
-        [{"name": "openai-chat:Qwen3.8-27b", "model_provider": "missing"}],
+        [{"name": "openai-chat:ornith:35b", "model_provider": "missing"}],
         _PROVIDERS,
     )
     assert len(models) == 1
     assert isinstance(models[0], OpenAIChatModel)
-    assert models[0].model_id == "openai:Qwen3.8-27b"
+    assert models[0].model_id == "openai:ornith:35b"
 
 
 def test_resolve_models_empty_falls_back_to_env(monkeypatch: pytest.MonkeyPatch):
     # With no `models` list, factory falls back to OPENAI_* env vars.
-    monkeypatch.setenv("OPENAI_MODEL", "Qwen3.8-27b")
+    monkeypatch.setenv("OPENAI_MODEL", "ornith:35b")
     monkeypatch.setenv("OPENAI_BASE_URL", "http://env-llm/v1")
     monkeypatch.setenv("OPENAI_API_KEY", "sk-env")
 
     models = resolve_models(None, _PROVIDERS)
     assert len(models) == 1
-    _assert_openai_chat(models[0], "openai:Qwen3.8-27b", "http://env-llm/v1/")
+    _assert_openai_chat(models[0], "openai:ornith:35b", "http://env-llm/v1/")
 
 
 def test_resolve_models_empty_without_env(monkeypatch: pytest.MonkeyPatch):
@@ -124,7 +124,7 @@ def test_build_node_agents_uses_playbook_models_when_node_omits(
     # OPENAI_* and fail when that env is unset.
     monkeypatch.delenv("OPENAI_MODEL", raising=False)
     nodes = [PlaybookNodeSpec(name="node_a", skills=[])]
-    playbook_models = [{"name": "openai-chat:Qwen3.8-27b", "model_provider": "default"}]
+    playbook_models = [{"name": "openai-chat:ornith:35b", "model_provider": "default"}]
 
     agents = build_node_agents(
         nodes,
@@ -134,7 +134,7 @@ def test_build_node_agents_uses_playbook_models_when_node_omits(
         models=playbook_models,
     )
     assert len(agents) == 1
-    _assert_openai_chat(agents[0].model, "openai:Qwen3.8-27b", "http://llm/v1/")
+    _assert_openai_chat(agents[0].model, "openai:ornith:35b", "http://llm/v1/")
 
 
 def test_build_node_agents_node_models_override_playbook():
@@ -145,7 +145,7 @@ def test_build_node_agents_node_models_override_playbook():
             models=[{"name": "openai-chat:node-model", "model_provider": "default"}],
         )
     ]
-    playbook_models = [{"name": "openai-chat:Qwen3.8-27b", "model_provider": "default"}]
+    playbook_models = [{"name": "openai-chat:ornith:35b", "model_provider": "default"}]
 
     agents = build_node_agents(
         nodes,

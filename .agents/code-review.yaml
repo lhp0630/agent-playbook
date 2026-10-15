@@ -44,7 +44,7 @@ capabilities:
       model_providers: []
 
       # models:
-      #   - name: openai-chat:Qwen3.8-27b
+      #   - name: openai-chat:ornith:35b
       #     model_provider: openai
 
       model_settings:

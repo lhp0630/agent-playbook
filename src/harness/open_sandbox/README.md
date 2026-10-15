@@ -37,7 +37,7 @@ from pydantic_ai import Agent
 from harness.open_sandbox import OpenSandbox
 
 agent = Agent(
-    'openai:Qwen3.8-27b',
+    'openai:ornith:35b',
     capabilities=[OpenSandbox()],
 )
 
