@@ -6,10 +6,10 @@ agent-playbook 将 YAML Agent Spec 封装为基于 pydantic-ai [`Capability`](ht
 
 ## 功能
 
-- **`Playbook` Capability**（[`harness.playbook`](src/harness/playbook/)）：通过 `Agent(..., capabilities=[Playbook(...)])` 挂载，或在 Agent Spec YAML 中声明
-- **`OpenSandbox` Capability**（[`harness.open_sandbox`](src/harness/open_sandbox/)）：在隔离容器中提供 shell / 文件工具（功能对齐 `pydantic_ai_harness.modal_sandbox`）
-- 在 [`.agents/`](.agents/) 用声明式 Agent Spec，经 `Agent.from_file(..., custom_capability_types=[Playbook, OpenSandbox])` 加载
-- 内置 `code-review`（第一性原理 → 5 Whys → 代码审查），支持 GitHub WebFetch 与 GitLab MCP
+- Spec 驱动的单 Agent（`Agent.from_spec` with capabilities）——不是硬编码 `research_agent` / `code_agent` 的多 Agent 产品
+- [`Playbook`](src/harness/playbook)：命名 Skill 节点、DynamicWorkflow 编排、可选 MCP
+- [`OpenSandbox`](src/harness/open_sandbox)：隔离容器中的 shell / 文件工具，用于执行不可信代码
+- 内置 `code-review`，内置 GitLab MCP
 
 ## 安装
 
@@ -28,7 +28,7 @@ uv sync --all-groups --extra agent
 git submodule update --init --recursive
 ```
 
-技能包位于 `.agents/skills/`（`first-principles-skill`、`5-whys-skill`、`code-review-skill`）。
+技能包位于 `.agents/skills/`（`code-review-skill`）。
 
 ## 快速开始
 

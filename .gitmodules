@@ -1,9 +1,3 @@
 [submodule ".agents/skills/code-review-skill"]
 	path = .agents/skills/code-review-skill
 	url = https://github.com/awesome-skills/code-review-skill.git
-[submodule ".agents/skills/first-principles-skill"]
-	path = .agents/skills/first-principles-skill
-	url = https://github.com/awesome-skills/first-principles-skill.git
-[submodule ".agents/skills/5-whys-skill"]
-	path = .agents/skills/5-whys-skill
-	url = https://github.com/awesome-skills/5-whys-skill.git

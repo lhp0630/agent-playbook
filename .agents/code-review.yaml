@@ -1,5 +1,5 @@
 name: code-review
-description: Review a GitHub/GitLab commit or PR/MR via first principles, 5-whys, then code review
+description: Review a GitHub/GitLab commit or PR/MR via code review
 
 capabilities:
   - WebFetch: {local: true}
@@ -16,14 +16,8 @@ capabilities:
         - If still missing: ask the user to provide the project path or numeric project_id; do not call the tool.
 
       nodes:
-        - name: first_principles
-          instructions: Load and apply the first-principles-skill. Base your analysis on the fetched diff/PR content and any prior context in the task. State whether the change should be adopted and why.
-          skills: ["first-principles-skill"]
-        - name: five_whys
-          instructions: Load and apply the 5-whys-skill. Dig into the implementation rationale behind the change, using the fetched content and the first-principles analysis from prior steps.
-          skills: ["5-whys-skill"]
         - name: code_review
-          instructions: Load and apply the code-review-skill. Produce a concrete review of the fetched diff/PR, incorporating insights from first-principles and 5-whys analysis when available.
+          instructions: Load and apply the code-review-skill. Produce a concrete review of the fetched diff/PR.
           skills: ["code-review-skill"]
 
       mcp_servers:

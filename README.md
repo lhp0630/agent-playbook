@@ -6,10 +6,10 @@ agent-playbook turns YAML agent specs into a pydantic-ai [`Capability`](https://
 
 ## Features
 
-- **`Playbook` capability** under [`harness.playbook`](src/harness/playbook/): attach with `Agent(..., capabilities=[Playbook(...)])` or declare it in an agent-spec YAML
-- **`OpenSandbox` capability** under [`harness.open_sandbox`](src/harness/open_sandbox/): shell + file tools in an isolated container (aligned with `pydantic_ai_harness.modal_sandbox`)
-- Declarative agent specs under [`.agents/`](.agents/): loaded via `Agent.from_file(..., custom_capability_types=[Playbook, OpenSandbox])`
-- Built-in `code-review` (first principles → 5-whys → code review), with GitHub WebFetch and GitLab MCP
+- Spec-driven single agent (`Agent.from_spec` with capabilities)—not a multi-agent product with hardcoded `research_agent` / `code_agent`
+- [`Playbook`](src/harness/playbook): named skill nodes, DynamicWorkflow orchestration, optional MCP
+- [`OpenSandbox`](src/harness/open_sandbox): isolated shell + file tools for untrusted code
+- Built-in `code-review`, with built-in GitLab MCP
 
 ## Installation
 
@@ -28,7 +28,7 @@ If you already cloned without submodules:
 git submodule update --init --recursive
 ```
 
-Skill packages live under `.agents/skills/` (`first-principles-skill`, `5-whys-skill`, `code-review-skill`).
+Skill packages live under `.agents/skills/` (`code-review-skill`).
 
 ## Quick Start
 
