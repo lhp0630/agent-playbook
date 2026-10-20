@@ -1,0 +1,47 @@
+---
+description: Invariant-first surgical bugfixes — neat AI patches via spec before code
+alwaysApply: true
+---
+
+# Invariant-first surgical fixes
+
+When fixing a bug or adding a small behavior change, **spec before patch**. Neatness comes from a proven invariant, not from polish.
+
+## Workflow
+
+1. **Write the invariant (1–3 sentences)** before code:
+   - When it applies
+   - What changes
+   - What is deliberately left alone
+2. **Split layers**: pure transform (testable, no I/O) vs call-site guard (when to apply the view/policy).
+3. **Name from the domain**, not the symptom (`trim_unfinished_tail`, not `fix_messages`).
+4. **Tests = invariants**: one test name per clause; include one regression on the **user-visible** symptom.
+5. **Comments explain causality** (why / when), never restate the filter line.
+6. **Match the neighbor module's accent** (docstrings, early returns, immutability, colocated `*_tests.py`).
+
+## Do / Don't
+
+```text
+✅ Invariant → minimal pure fn → call-site guard → invariant-named tests → why-docstring
+❌ Broaden the fix past the stated boundary
+❌ Put request/runtime checks inside the pure transform
+❌ Tests that only assert internals with no symptom regression
+❌ Comments like "# remove tool calls"
+```
+
+## Exemplar shape (conversation stream-resume)
+
+Invariant: *While a run is in flight, the log tail is that run's response; unanswered tool calls must not dump as history (replay re-delivers them). Mid-log orphans stay.*
+
+- Pure: `ConversationAdapter.trim_unfinished_tail` — early returns, `replace` / `model_copy`, touch only `events[-1]`
+- Guard: call only when `get_inflight_run(...) is not None`
+- Tests: keeps text / drops tool-only / completed untouched / request tail untouched / orphans stay / no `approval-requested`
+
+## Prompt stub for agents
+
+```text
+Bug: <user-visible symptom>
+Invariant: <when / change / leave alone>
+Constraints: pure fn in <module>; guard at call site; match <neighbor>; tests named after invariant clauses; one symptom regression
+Do not: broaden past the boundary
+```
