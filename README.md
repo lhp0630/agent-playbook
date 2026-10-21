@@ -9,7 +9,8 @@ agent-playbook turns YAML agent specs into a pydantic-ai [`Capability`](https://
 - Spec-driven single agent (`Agent.from_spec` with capabilities)—not a multi-agent product with hardcoded `research_agent` / `code_agent`
 - [`Playbook`](src/harness/playbook): named skill nodes, DynamicWorkflow orchestration, optional MCP
 - [`OpenSandbox`](src/harness/open_sandbox): isolated shell + file tools for untrusted code
-- Built-in `code-review`, with built-in GitLab MCP
+- Built-in `code-review`, using `@zereight/mcp-gitlab` MCP
+- Built-in `outlook-mail`, using `@softeria/ms-365-mcp-server` MCP
 
 ## Installation
 
@@ -43,6 +44,10 @@ OPENAI_API_KEY=...
 # Optional — enable GitLab MCP for GitLab URLs
 GITLAB_API_URL=https://gitlab.example.com/api/v4
 GITLAB_PERSONAL_ACCESS_TOKEN=glpat-xxx
+
+# Optional — Outlook MCP for outlook-mail (absolute paths; one-time `npx -y @softeria/ms-365-mcp-server --login`)
+MS365_MCP_TOKEN_CACHE_PATH=/absolute/path/.config/ms365-mcp/.token-cache.json
+MS365_MCP_SELECTED_ACCOUNT_PATH=/absolute/path/.config/ms365-mcp/.selected-account.json
 
 # Optional — OpenSandbox server for harness.open_sandbox.OpenSandbox
 OPEN_SANDBOX_API_KEY=...
@@ -116,6 +121,6 @@ See [`src/harness/open_sandbox/README.md`](src/harness/open_sandbox/README.md) f
 
 ## Example
 
-| GitHub | GitLab | Result | Issues |
-| --- | --- | --- | --- |
-| ![Web UI — GitHub](./readme_assets/web_1.png) | ![Web UI — GitLab](./readme_assets/web_gitlab.png) | ![Web UI — result](./readme_assets/web_2.png) | ![Web UI - Issues](./readme_assets/web_issues.png) |
+| Code Review | Outlook Mail |
+| --- | --- |
+| ![Code Review](readme_assets/img_gitlab.png) | ![Outlook Mail](readme_assets/img_outlook.png) |

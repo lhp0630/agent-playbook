@@ -9,7 +9,8 @@ agent-playbook 将 YAML Agent Spec 封装为基于 pydantic-ai [`Capability`](ht
 - Spec 驱动的单 Agent（`Agent.from_spec` with capabilities）——不是硬编码 `research_agent` / `code_agent` 的多 Agent 产品
 - [`Playbook`](src/harness/playbook)：命名 Skill 节点、DynamicWorkflow 编排、可选 MCP
 - [`OpenSandbox`](src/harness/open_sandbox)：隔离容器中的 shell / 文件工具，用于执行不可信代码
-- 内置 `code-review`，内置 GitLab MCP
+- 内置 `code-review`，使用 `@zereight/mcp-gitlab` MCP
+- 内置 `outlook-mail`，使用 `@softeria/ms-365-mcp-server` MCP
 
 ## 安装
 
@@ -43,6 +44,10 @@ OPENAI_API_KEY=...
 # 可选 — 启用 GitLab MCP，用于 GitLab 地址
 GITLAB_API_URL=https://gitlab.example.com/api/v4
 GITLAB_PERSONAL_ACCESS_TOKEN=glpat-xxx
+
+# 可选 — outlook-mail 的 Outlook MCP（绝对路径；一次性执行 `npx -y @softeria/ms-365-mcp-server --login`）
+MS365_MCP_TOKEN_CACHE_PATH=/absolute/path/.config/ms365-mcp/.token-cache.json
+MS365_MCP_SELECTED_ACCOUNT_PATH=/absolute/path/.config/ms365-mcp/.selected-account.json
 
 # 可选 — OpenSandbox 服务，用于 harness.open_sandbox.OpenSandbox
 OPEN_SANDBOX_API_KEY=...
@@ -116,6 +121,6 @@ agent = Agent(
 
 ## 示例
 
-| GitHub | GitLab | 结果 | Issues |
-| --- | --- | --- | --- |
-| ![Web UI — GitHub](./readme_assets/web_1.png) | ![Web UI — GitLab](./readme_assets/web_gitlab.png) | ![Web UI — result](./readme_assets/web_2.png) | ![Web UI - Issues](./readme_assets/web_issues.png) |
+| Code Review | Outlook Mail |
+| --- | --- |
+| ![Code Review](readme_assets/img_gitlab.png) | ![Outlook Mail](readme_assets/img_outlook.png) |
