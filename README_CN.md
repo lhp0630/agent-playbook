@@ -6,7 +6,7 @@ agent-playbook 将 YAML Agent Spec 封装为基于 pydantic-ai [`Capability`](ht
 
 ## 功能
 
-- Spec 驱动的单 Agent（`Agent.from_spec` with capabilities）——不是硬编码 `research_agent` / `code_agent` 的多 Agent 产品
+- Spec 驱动的 Agent（`Agent.from_file` with capabilities）。加载了两个及以上 Spec 时，网页对话从路由 Agent 进入
 - [`Playbook`](src/harness/playbook)：命名 Skill 节点、DynamicWorkflow 编排、可选 MCP
 - [`OpenSandbox`](src/harness/open_sandbox)：隔离容器中的 shell / 文件工具，用于执行不可信代码
 - 内置 `code-review`，使用 `@zereight/mcp-gitlab` MCP
@@ -60,7 +60,13 @@ OPEN_SANDBOX_DOMAIN=localhost:8080
 agent
 ```
 
-访问 `http://127.0.0.1:8000`，粘贴 GitHub PR URL，或 GitLab MR / Issue URL。
+访问 `http://127.0.0.1:8000`。两个内置 Spec 都加载时，可以要求代码评审，或处理 Outlook 邮件。
+
+## 网页对话
+
+加载了多个 Agent Spec 时，网页对话的唯一入口是路由 Agent。它决定把这一轮转交给某一个 Agent，或向用户追问。路由 capability 按会话保存每个 Agent 的完整 message history。同一会话里来回切换 Agent 时，各自的历史都还在：交给 outlook-mail 的历史不会带上 code-review 的工具记录。路由 Agent 自己的聊天记录仍由 `to_web` 保存，用来判断这一轮是不是在延续上一个 Agent。
+
+只加载了一个 Spec 时，网页对话直接进入该 Agent。
 
 ## 编程接入
 

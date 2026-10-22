@@ -6,7 +6,7 @@ agent-playbook turns YAML agent specs into a pydantic-ai [`Capability`](https://
 
 ## Features
 
-- Spec-driven single agent (`Agent.from_spec` with capabilities)—not a multi-agent product with hardcoded `research_agent` / `code_agent`
+- Spec-driven agents from YAML (`Agent.from_file` with capabilities). With two or more specs loaded, the web chat enters through a routing agent
 - [`Playbook`](src/harness/playbook): named skill nodes, DynamicWorkflow orchestration, optional MCP
 - [`OpenSandbox`](src/harness/open_sandbox): isolated shell + file tools for untrusted code
 - Built-in `code-review`, using `@zereight/mcp-gitlab` MCP
@@ -60,7 +60,13 @@ Run a playbook:
 agent
 ```
 
-Open `http://127.0.0.1:8000` and paste a GitHub PR URL, or a GitLab MR/issue URL.
+Open `http://127.0.0.1:8000`. With both built-in specs loaded, ask for a code review or for help with Outlook mail.
+
+## Web chat
+
+With more than one agent spec loaded, the web chat's only entry is the routing agent. It decides whether to hand the turn off to one agent or ask a clarifying question. The routing capability holds each agent's complete message history for that conversation. When the conversation switches between agents, each history stays in place: the history handed to outlook-mail does not include code-review's tool records. The routing agent's own chat transcript is still stored by `to_web`, and the router uses it to decide whether the new message continues the previous agent.
+
+With a single spec loaded, the web chat talks to that agent directly.
 
 ## Programmatic usage
 
