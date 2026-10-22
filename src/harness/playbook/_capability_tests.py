@@ -172,6 +172,7 @@ def test_load_codereview_agent_spec(monkeypatch: pytest.MonkeyPatch) -> None:
     root = agent._root_capability
     assert isinstance(root, CombinedCapability)
     playbook = next(cap for cap in root.capabilities if isinstance(cap, Playbook))
-    assert len(playbook._nodes) == 3
+    assert [node.name for node in playbook._nodes] == ["code_review"]
+    assert playbook._nodes[0].skills == ["code-review-skill"]
     assert playbook._mcp_servers is not None
     assert any(server.name == "gitlab" for server in playbook._mcp_servers)
