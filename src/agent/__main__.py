@@ -1,29 +1,26 @@
 import asyncio
 import os
-import random
 import sys
 from contextlib import asynccontextmanager
 from logging.config import dictConfig
-from typing import Any
 
 import fire
 import uvicorn
 from dotenv import find_dotenv, load_dotenv
 from pydantic_ai import Agent
-from pydantic_ai.agent.spec import AgentSpec
-from pydantic_ai.models import Model
 from uvicorn.config import LOGGING_CONFIG
-
-from harness.open_sandbox import OpenSandbox
-from harness.playbook import Playbook
-from harness.playbook._toolset import normalize_models, normalize_name, resolve_models
 
 env_file = find_dotenv(usecwd=True)
 load_dotenv(env_file)
 
 from .config import CONFIG_MANAGER  # noqa: E402
-
-CUSTOM_CAPABILITY_TYPES = [Playbook, OpenSandbox]
+from .router import (  # noqa: E402
+    CUSTOM_CAPABILITY_TYPES,
+    AgentRouter,
+    load_spec_agent,
+    prepare_web_entry,
+    router_models,
+)
 
 
 def setup_logger(log_level: str = os.getenv("PLAYBOOK_LOG_LEVEL", "INFO")):
@@ -37,44 +34,42 @@ def setup_logger(log_level: str = os.getenv("PLAYBOOK_LOG_LEVEL", "INFO")):
     dictConfig(config_logger)
 
 
-def _resolve_model_from_spec(spec: AgentSpec) -> list[Model[Any]]:
-    """Prefer Playbook-configured models; fall back to OPENAI_* env vars."""
-    # TODO: Read models/model_providers from app_config and pass them into Playbook
-    # instead of pulling them from the playbook capability kwargs / OPENAI_* env.
-    for cap in spec.capabilities:
-        if cap.name != "Playbook":
-            continue
-        kwargs = cap.kwargs
-        models = resolve_models(
-            normalize_models(kwargs.get("models")),
-            kwargs.get("model_providers") or [],
-        )
-        if models:
-            return models
-    return resolve_models(None, [])
-
-
 def startup_web(host: str = "127.0.0.1", port: int = 8000):
     # TODO: Add a runtime update mechanism, or remove the live-reload claim and watcher behavior.
-    agent_specs = CONFIG_MANAGER.agent_specs
-    if not agent_specs:
+    try:
+        entry = prepare_web_entry(CONFIG_MANAGER.agent_specs)
+    except ValueError as exc:
+        print(str(exc), file=sys.stderr)
+        raise SystemExit(1) from exc
+    except SystemExit:
         print("No agent spec found.", file=sys.stderr)
-        raise SystemExit(1)
+        raise
 
-    # TODO: Routing Agent that classifies user intent and picks a sub-Agent.
-    path, spec = random.choice(agent_specs)
+    if entry.route is not None:
+        try:
+            agent, models = load_spec_agent(
+                entry.route.path,
+                custom_capability_types=CUSTOM_CAPABILITY_TYPES,
+            )
+        except RuntimeError as exc:
+            print(str(exc), file=sys.stderr)
+            raise SystemExit(1) from exc
+    else:
+        models = router_models()
+        if not models:
+            print("No model configured for agent.", file=sys.stderr)
+            raise SystemExit(1)
+        agent = Agent(
+            models[0],
+            name="router",
+            capabilities=[
+                AgentRouter(
+                    specs=lambda: CONFIG_MANAGER.agent_specs,
+                    custom_capability_types=CUSTOM_CAPABILITY_TYPES,
+                )
+            ],
+        )
 
-    models = _resolve_model_from_spec(spec)
-    if not models and not spec.model:
-        print("No model configured for agent.", file=sys.stderr)
-        raise SystemExit(1)
-
-    agent = Agent.from_file(
-        path,
-        custom_capability_types=CUSTOM_CAPABILITY_TYPES,
-        model=models[0] if models else None,
-        name=normalize_name(spec.name) if spec.name else None,
-    )
     app = agent.to_web(models=models)
 
     @asynccontextmanager

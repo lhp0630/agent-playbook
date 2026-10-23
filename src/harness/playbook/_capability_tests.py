@@ -41,10 +41,7 @@ def test_from_spec_raises_when_yaml_missing(tmp_path: Path):
 def test_from_spec_loads_models(tmp_path: Path):
     path = tmp_path / "playbook.yml"
     path.write_text(
-        _BASE
-        + "models:\n"
-        + "  - name: openai-chat:ornith:35b\n"
-        + "    model_provider: default\n"
+        _BASE + "models:\n" + "  - name: openai-chat:ornith:35b\n" + "    model_provider: default\n"
     )
     playbook = _load_playbook(path)
     assert playbook.models is not None
@@ -172,6 +169,51 @@ def test_load_codereview_agent_spec(monkeypatch: pytest.MonkeyPatch) -> None:
     root = agent._root_capability
     assert isinstance(root, CombinedCapability)
     playbook = next(cap for cap in root.capabilities if isinstance(cap, Playbook))
-    assert len(playbook._nodes) == 3
+    assert [node.name for node in playbook._nodes] == ["code_review"]
+    assert playbook._nodes[0].skills == ["code-review-skill"]
     assert playbook._mcp_servers is not None
     assert any(server.name == "gitlab" for server in playbook._mcp_servers)
+
+
+def test_load_outlook_mail_agent_spec(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("OPENAI_API_KEY", "sk-test")
+    monkeypatch.setenv("OPENAI_MODEL", "ornith:35b")
+    monkeypatch.setenv(
+        "MS365_MCP_TOKEN_CACHE_PATH",
+        "/tmp/ms365-mcp/.token-cache.json",
+    )
+    monkeypatch.setenv(
+        "MS365_MCP_SELECTED_ACCOUNT_PATH",
+        "/tmp/ms365-mcp/.selected-account.json",
+    )
+
+    from pydantic_ai import Agent
+    from pydantic_ai.capabilities import CombinedCapability
+
+    from harness.playbook._toolset import resolve_models
+
+    path = Path(".agents") / "outlook-mail.yaml"
+    agent = Agent.from_file(
+        path,
+        custom_capability_types=[Playbook],
+        model=resolve_models(None, [])[0],
+    )
+    assert agent.name == "outlook-mail"
+    assert agent.description
+
+    root = agent._root_capability
+    assert isinstance(root, CombinedCapability)
+    playbook = next(cap for cap in root.capabilities if isinstance(cap, Playbook))
+    assert playbook._nodes == []
+    assert playbook.instructions is not None
+    assert "create-reply-draft" in playbook.instructions
+    assert "delete-mail-message" in playbook.instructions
+    assert playbook._mcp_servers is not None
+    server = next(item for item in playbook._mcp_servers if item.name == "outlook")
+    assert server.commands is not None
+    assert "@softeria/ms-365-mcp-server" in server.commands
+    assert server.commands[-2:] == ["--preset", "mail"]
+    assert server.env_vars == [
+        "MS365_MCP_TOKEN_CACHE_PATH",
+        "MS365_MCP_SELECTED_ACCOUNT_PATH",
+    ]

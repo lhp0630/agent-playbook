@@ -6,10 +6,11 @@ agent-playbook turns YAML agent specs into a pydantic-ai [`Capability`](https://
 
 ## Features
 
-- Spec-driven single agent (`Agent.from_spec` with capabilities)—not a multi-agent product with hardcoded `research_agent` / `code_agent`
+- Spec-driven agents from YAML (`Agent.from_file` with capabilities). With two or more specs loaded, the web chat enters through a routing agent
 - [`Playbook`](src/harness/playbook): named skill nodes, DynamicWorkflow orchestration, optional MCP
 - [`OpenSandbox`](src/harness/open_sandbox): isolated shell + file tools for untrusted code
-- Built-in `code-review`, with built-in GitLab MCP
+- Built-in `code-review`, using `@zereight/mcp-gitlab` MCP
+- Built-in `outlook-mail`, using `@softeria/ms-365-mcp-server` MCP
 
 ## Installation
 
@@ -44,6 +45,10 @@ OPENAI_API_KEY=...
 GITLAB_API_URL=https://gitlab.example.com/api/v4
 GITLAB_PERSONAL_ACCESS_TOKEN=glpat-xxx
 
+# Optional — Outlook MCP for outlook-mail (absolute paths; one-time `npx -y @softeria/ms-365-mcp-server --login`)
+MS365_MCP_TOKEN_CACHE_PATH=/absolute/path/.config/ms365-mcp/.token-cache.json
+MS365_MCP_SELECTED_ACCOUNT_PATH=/absolute/path/.config/ms365-mcp/.selected-account.json
+
 # Optional — OpenSandbox server for harness.open_sandbox.OpenSandbox
 OPEN_SANDBOX_API_KEY=...
 OPEN_SANDBOX_DOMAIN=localhost:8080
@@ -55,7 +60,13 @@ Run a playbook:
 agent
 ```
 
-Open `http://127.0.0.1:8000` and paste a GitHub PR URL, or a GitLab MR/issue URL.
+Open `http://127.0.0.1:8000`. With both built-in specs loaded, ask for a code review or for help with Outlook mail.
+
+## Web chat
+
+With more than one agent spec loaded, the web chat's only entry is the routing agent. It decides whether to hand the turn off to one agent or ask a clarifying question. The routing capability holds each agent's complete message history for that conversation. When the conversation switches between agents, each history stays in place: the history handed to outlook-mail does not include code-review's tool records. The routing agent's own chat transcript is still stored by `to_web`, and the router uses it to decide whether the new message continues the previous agent.
+
+With a single spec loaded, the web chat talks to that agent directly.
 
 ## Programmatic usage
 
@@ -116,6 +127,6 @@ See [`src/harness/open_sandbox/README.md`](src/harness/open_sandbox/README.md) f
 
 ## Example
 
-| GitHub | GitLab | Result | Issues |
-| --- | --- | --- | --- |
-| ![Web UI — GitHub](./readme_assets/web_1.png) | ![Web UI — GitLab](./readme_assets/web_gitlab.png) | ![Web UI — result](./readme_assets/web_2.png) | ![Web UI - Issues](./readme_assets/web_issues.png) |
+| Code Review | Outlook Mail |
+| --- | --- |
+| ![Code Review](readme_assets/img_gitlab.png) | ![Outlook Mail](readme_assets/img_outlook.png) |
