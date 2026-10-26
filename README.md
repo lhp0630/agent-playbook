@@ -8,13 +8,13 @@ agent-playbook turns YAML agent specs into a pydantic-ai [`Capability`](https://
 
 - Spec-driven agents from YAML (`Agent.from_file` with capabilities). With two or more specs loaded, the web chat enters through a routing agent
 - [`Playbook`](src/harness/playbook): named skill nodes, DynamicWorkflow orchestration, optional MCP
-- [`OpenSandbox`](src/harness/open_sandbox): isolated shell + file tools for untrusted code
+- [`OpenSandbox`](src/harness/open_sandbox): isolated container workspace for untrusted code
 - Built-in `code-review`, using `@zereight/mcp-gitlab` MCP
 - Built-in `outlook-mail`, using `@softeria/ms-365-mcp-server` MCP
 
 ## Installation
 
-Python 3.10+. Uses [uv](https://docs.astral.sh/uv/) for dependencies (includes `pydantic-ai-harness[dynamic-workflow]` and `pydantic-ai-skills[opensandbox]`):
+Python 3.10+. Uses [uv](https://docs.astral.sh/uv/) for dependencies (includes `pydantic-ai-harness[dynamic-workflow]`, `pydantic-ai-skills`, and `opensandbox`):
 
 ```bash
 git clone --recurse-submodules https://github.com/lhp0630/agent-playbook.git && cd agent-playbook
@@ -115,15 +115,17 @@ See [`src/harness/playbook/README.md`](src/harness/playbook/README.md) for Playb
 
 ```python
 from pydantic_ai import Agent
+from pydantic_ai_harness.filesystem import FileSystem
+from pydantic_ai_harness.shell import Shell
 from harness.open_sandbox import OpenSandbox
 
 agent = Agent(
     'openai:ornith:35b',
-    capabilities=[OpenSandbox()],
+    capabilities=[OpenSandbox(), Shell(), FileSystem()],
 )
 ```
 
-See [`src/harness/open_sandbox/README.md`](src/harness/open_sandbox/README.md) for tools, lifetime modes, and agent-spec YAML.
+See [`src/harness/open_sandbox/README.md`](src/harness/open_sandbox/README.md) for the workspace, lifetime, and agent-spec YAML.
 
 ## Example
 

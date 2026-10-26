@@ -1,16 +1,18 @@
 # OpenSandbox
 
-`OpenSandbox` gives an agent an isolated container for running commands and working
-with files. Use it for coding, data processing, and other tasks that should not
-execute model-generated commands on the application host.
+`OpenSandbox` gives an agent run an isolated container workspace. Commands and file
+operations run inside that container, not on the application host.
 
-The capability adds shell and file tools backed by
-[OpenSandbox](https://github.com/opensandbox-group/OpenSandbox) via the same
-`opensandbox` SDK used by
-[`OpenSandboxScriptExecutor`][pydantic_ai_skills.sandboxes.opensandbox.OpenSandboxScriptExecutor].
-By default, every agent run gets a fresh sandbox created from a container image.
-The capability destroys it when the run ends. You can also attach an existing
-sandbox or reuse one across several runs.
+The capability supplies the workspace only. Compose it with
+[`Shell`](https://pydantic.dev/docs/ai/harness/shell/) and
+[`FileSystem`](https://pydantic.dev/docs/ai/harness/filesystem/), or call
+`ctx.workspace` from your own tools. File operations use the sandbox
+`files` service (`Sandbox.files`); commands use `Sandbox.commands`.
+
+The backend talks to [OpenSandbox](https://github.com/opensandbox-group/OpenSandbox)
+through the `opensandbox` SDK directly. A fresh sandbox is created the first time
+the run uses the workspace, and it is not deleted when the run ends. Delete it with
+`OpenSandbox.destroy` and the run's `workspace.ref`.
 
 > [!NOTE]
 > Import from the `harness` package:
@@ -21,58 +23,56 @@ sandbox or reuse one across several runs.
 
 ## Quick start
 
-Install the `opensandbox` extra (already included when using
-`pydantic-ai-skills[opensandbox]`) and point at a reachable OpenSandbox server:
-
 ```bash
-uv add "pydantic-ai-skills[opensandbox]"
+uv add opensandbox
 export OPEN_SANDBOX_API_KEY=...
 export OPEN_SANDBOX_DOMAIN=localhost:8080   # optional; defaults to localhost:8080
 ```
 
-Add `OpenSandbox` to the agent:
-
 ```python
 from pydantic_ai import Agent
+from pydantic_ai_harness.filesystem import FileSystem
+from pydantic_ai_harness.shell import Shell
 from harness.open_sandbox import OpenSandbox
 
 agent = Agent(
     'openai:ornith:35b',
-    capabilities=[OpenSandbox()],
+    capabilities=[OpenSandbox(image='opensandbox/code-interpreter:v1.1.0'), Shell(), FileSystem()],
 )
 
 result = agent.run_sync('Create a Python script and run its tests.')
 print(result.output)
 ```
 
-## Tools
+A custom tool uses the same workspace:
 
-| Tool | Purpose |
-|---|---|
-| `run_command` | Run a shell command (`sh -c`) in the sandbox. |
-| `read_file` | Read a text file from the sandbox. |
-| `write_file` | Write text to a file (creating parent directories). |
-| `list_directory` | List a directory's entries (directories shown with a trailing `/`). |
+```python
+from pydantic_ai import Agent, RunContext
 
-Output is labelled with `[stdout]` / `[stderr]` markers and an `[exit code: N]`
-line on non-zero exit. Streams and file reads are truncated by `max_output_bytes`
-and `max_output_lines`. A non-zero exit from `run_command` is reported, not raised.
+@agent.tool
+async def run_python(ctx: RunContext, code: str) -> str:
+    """Run a Python snippet in the sandbox."""
+    result = await ctx.workspace.run(['python', '-c', code], timeout=10)
+    return result.stdout + result.stderr
+```
 
 ## Sandbox lifetime
 
-- **Owned** (default): each run creates a fresh sandbox and destroys it on exit.
-- **Attach** (`sandbox_id=...`): connect to an existing sandbox; never destroy it.
-- **Injected session** (`session=...`): reuse a caller-owned `OpenSandboxSession`;
-  the capability never opens or closes it.
+- **Created** (default): the first workspace operation creates a sandbox from `image`.
+  The backend does not destroy it when the run ends.
+- **Continue**: the next run finds `WorkspaceRef(provider='opensandbox', id=...)` on
+  the message history, or you pass that ref as `workspace=`.
+- **Fresh**: pass `workspace='new'` to ignore the ref recorded in history.
+- **Already running**: build `OpenSandboxBackend(sandbox=sandbox)` and pass it as
+  `workspace=`. The capability's `image` and `sandbox_timeout` do not apply to it.
 
-Owned-only settings (`image`, `sandbox_timeout`, `workdir`, `env`) cannot be
-combined with `sandbox_id` or `session`.
+```python
+ref = result.workspace.ref
+await OpenSandbox().destroy(ref)
+```
 
-## Failure handling
-
-- **Recoverable** (`OpenSandboxError`) → `ModelRetry` so the model can react.
-- **Terminal** (`OpenSandboxUnavailableError`, `OpenSandboxAuthError`) → propagate
-  and end the run.
+`image` and `sandbox_timeout` apply only when creating a sandbox. `working_dir` and
+`env` apply to every command, including on an attached sandbox.
 
 ## Agent-spec YAML
 
@@ -81,6 +81,8 @@ capabilities:
   - OpenSandbox:
       image: opensandbox/code-interpreter:v1.1.0
       sandbox_timeout: 300
+  - Shell: {}
+  - FileSystem: {}
 ```
 
 ```python

@@ -1,225 +1,117 @@
-"""OpenSandbox capability that gives agents a container sandbox to work in."""
+"""Capability that supplies an OpenSandbox container as an agent run's workspace."""
 
 from __future__ import annotations
 
-import math
 from collections.abc import Mapping
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 from pydantic_ai.capabilities import AbstractCapability
-from pydantic_ai.tools import AgentDepsT
-from pydantic_ai.toolsets import AgentToolset
+from pydantic_ai.exceptions import UserError
+from pydantic_ai.tools import AgentDepsT, RunContext
+from pydantic_ai.workspaces import WorkspaceBackend, WorkspaceRef
 
-from harness.open_sandbox._session import (
-    DEFAULT_IMAGE as _DEFAULT_IMAGE,
-)
-from harness.open_sandbox._session import (
-    DEFAULT_SANDBOX_TIMEOUT as _DEFAULT_SANDBOX_TIMEOUT,
-)
-from harness.open_sandbox._session import (
-    OpenSandboxSession,
-)
-from harness.open_sandbox._tool_output import DEFAULT_MAX_BYTES, DEFAULT_MAX_LINES
-from harness.open_sandbox._toolset import OpenSandboxToolset
-
-_DEFAULT_MAX_READ_BYTES = 5 * 1024 * 1024
-
-_OWNED_INSTRUCTIONS = (
-    "You have an OpenSandbox: an isolated, ephemeral container. Use `run_command` to run "
-    "shell commands in it, and `read_file` / `write_file` / `list_directory` to manage files. "
-    "Commands run through `sh`, so pipes and redirection work. A command times out after "
-    "{default_timeout}s unless you pass `timeout_seconds` (up to {max_timeout}s). The sandbox "
-    "is reset between runs, so persist anything important outside it."
-)
-
-_ATTACHED_INSTRUCTIONS = (
-    "You have an OpenSandbox: an isolated container. Use `run_command` to run shell "
-    "commands in it, and `read_file` / `write_file` / `list_directory` to manage files. "
-    "Commands run through `sh`, so pipes and redirection work. A command times out after "
-    "{default_timeout}s unless you pass `timeout_seconds` (up to {max_timeout}s). This sandbox "
-    "persists across runs, so files from earlier runs can still be present."
+from harness.open_sandbox._backend import (
+    DEFAULT_IMAGE,
+    DEFAULT_SANDBOX_TIMEOUT,
+    PROVIDER,
+    OpenSandboxBackend,
+    _check_env,
+    _check_positive_int,
+    _check_working_dir,
+    destroy_sandbox,
 )
 
 
 @dataclass(kw_only=True)
 class OpenSandbox(AbstractCapability[AgentDepsT]):
-    """Access to an isolated container powered by [OpenSandbox](https://github.com/opensandbox-group/OpenSandbox).
+    """Supply an isolated OpenSandbox container as the run's workspace.
 
-    Gives the agent tools to run commands and manage files inside an OpenSandbox,
-    a place to execute untrusted or model-generated code without touching the host.
-    By default each run gets a fresh sandbox created from `image`. When the run ends,
-    the capability destroys the sandbox; `sandbox_timeout` is the server-side cleanup
-    backstop. To keep one sandbox across runs, either set `sandbox_id` to attach to a
-    sandbox you manage elsewhere, or pass a `session` you own (an open
-    `OpenSandboxSession`) so you control its lifetime.
+    A run with no reference creates a fresh container on first use. Pass a ``WorkspaceRef``
+    supplied by the application to attach to a sandbox from an earlier run.
 
-    Requires the `opensandbox` extra (`uv add "pydantic-ai-skills[opensandbox]"`) and a
-    reachable OpenSandbox server configured via `OPEN_SANDBOX_API_KEY` /
-    `OPEN_SANDBOX_DOMAIN` (same stack as
-    [`OpenSandboxScriptExecutor`][pydantic_ai_skills.sandboxes.opensandbox.OpenSandboxScriptExecutor]).
+    This capability supplies execution only. Compose it with tools or capabilities that
+    use the workspace, such as ``Shell`` or ``FileSystem``. Commands and file operations
+    run inside the container through ``ctx.workspace``.
+
+    Requires the ``opensandbox`` package and a reachable OpenSandbox server configured
+    via ``OPEN_SANDBOX_API_KEY`` / ``OPEN_SANDBOX_DOMAIN``.
 
     ```python
     from pydantic_ai import Agent
+    from pydantic_ai_harness.filesystem import FileSystem
+    from pydantic_ai_harness.shell import Shell
     from harness.open_sandbox import OpenSandbox
 
-    agent = Agent('openai:ornith:35b', capabilities=[OpenSandbox()])
-    result = agent.run_sync('Write a Python script that prints the first 10 primes and run it.')
-    print(result.output)
+    agent = Agent(
+        'openai:ornith:35b',
+        capabilities=[OpenSandbox(), Shell(), FileSystem()],
+    )
     ```
     """
 
-    image: str = _DEFAULT_IMAGE
-    """Container image for owned sandboxes, as a registry tag."""
+    image: str = DEFAULT_IMAGE
+    """OCI image for a newly created sandbox."""
 
-    sandbox_id: str | None = None
-    """Attach to an existing sandbox by id instead of creating one.
+    sandbox_timeout: int = DEFAULT_SANDBOX_TIMEOUT
+    """Lifetime in seconds of a newly created sandbox before the server shuts it down."""
 
-    Attached sandboxes are not destroyed.
+    working_dir: str | None = None
+    """Absolute directory commands start in and relative paths resolve against.
 
-    The settings that only apply when creating a sandbox (`image`, `sandbox_timeout`,
-    `workdir`, `env`) cannot be combined with `sandbox_id`.
+    ``None`` uses the container's own directory. Created when this capability creates
+    the sandbox.
     """
 
-    session: OpenSandboxSession | None = None
-    """Use a sandbox session you own and keep open across runs, instead of a per-run one.
-
-    Pass an already-entered `OpenSandboxSession` to reuse one sandbox across runs while
-    controlling its lifetime yourself. Cannot be combined with `sandbox_id` or the
-    owned-sandbox creation settings.
-    """
-
-    sandbox_timeout: int = _DEFAULT_SANDBOX_TIMEOUT
-    """Maximum lifetime in seconds of an owned sandbox before the server shuts it down."""
-
-    workdir: str | None = None
-    """Working directory for commands inside an owned sandbox (container default when None)."""
-
-    env: Mapping[str, str] | None = None
-    """Environment variables to set in an owned sandbox."""
-
-    default_command_timeout: float = 60.0
-    """Default timeout in seconds for one `run_command`, used when the model omits one."""
-
-    max_command_timeout: int | None = None
-    """Hard ceiling in seconds for any single `run_command`.
-
-    None falls back to `sandbox_timeout`.
-    """
-
-    max_output_bytes: int = DEFAULT_MAX_BYTES
-    """Maximum payload retained per command stream or file read, measured in UTF-8 bytes."""
-
-    max_output_lines: int = DEFAULT_MAX_LINES
-    """Maximum payload lines retained per command stream or file read."""
-
-    max_read_bytes: int = _DEFAULT_MAX_READ_BYTES
-    """Largest file `read_file` will read whole; larger files are refused with a shell hint."""
-
-    instructions: str | None = None
-    """Instructions for the model. `None` uses a mode-aware default; `''` disables."""
+    env: Mapping[str, str] | None = field(default=None, repr=False)
+    """Environment variables every command gets. Nothing is read from the host."""
 
     def __post_init__(self) -> None:
-        self._validate_configuration()
-        if self.env is not None:
-            self.env = dict(self.env)
+        if self.defer_loading:
+            raise UserError(
+                "`OpenSandbox` does not support `defer_loading=True`: "
+                "the workspace is selected before deferred capabilities load."
+            )
+        _check_positive_int("sandbox_timeout", self.sandbox_timeout)
+        _check_working_dir(self.working_dir)
+        try:
+            checked = _check_env(self.env)
+        except ValueError as error:
+            raise UserError(str(error)) from None
+        if checked is not None:
+            self.env = checked
+        # Fail a bad option when the agent is defined, before the first run.
+        self._new_backend(None)
 
-        if self.session is not None:
-            conflicts = self._non_default_owned_settings()
-            if self.sandbox_id is not None:
-                conflicts.append("sandbox_id")
-            if conflicts:
-                raise ValueError(
-                    f"{', '.join(conflicts)} cannot be combined with `session`, which already owns "
-                    "the sandbox and its configuration." + self._command_ceiling_hint(conflicts)
-                )
-            return
-        if self.sandbox_id is None:
-            ceiling = self.max_command_timeout
-            if ceiling is not None and ceiling > self.sandbox_timeout:
-                raise ValueError(
-                    f"max_command_timeout ({ceiling}) cannot exceed sandbox_timeout "
-                    f"({self.sandbox_timeout}) for an owned sandbox: the sandbox is reaped "
-                    "before such a command could finish. Raise sandbox_timeout instead."
-                )
-            return
-        ignored = self._non_default_owned_settings()
-        if ignored:
+    def backend(self, ref: WorkspaceRef) -> OpenSandboxBackend:
+        """Attach lazily to an existing sandbox."""
+        if ref.provider != PROVIDER:
             raise ValueError(
-                f"{', '.join(ignored)} only apply when creating a sandbox, "
-                "but `sandbox_id` attaches to an existing one. "
-                "Remove them, or drop `sandbox_id` to create a sandbox."
-                + self._command_ceiling_hint(ignored)
+                f"unsupported workspace provider {ref.provider!r}; expected {PROVIDER!r}"
             )
+        return self._new_backend(ref)
 
-    def _validate_configuration(self) -> None:
-        for name, value in (
-            ("sandbox_timeout", self.sandbox_timeout),
-            ("max_output_bytes", self.max_output_bytes),
-            ("max_output_lines", self.max_output_lines),
-            ("max_read_bytes", self.max_read_bytes),
-        ):
-            if type(value) is not int or value <= 0:
-                raise ValueError(f"{name} must be a positive integer, got {value!r}.")
-
-        timeout = self.default_command_timeout
-        if type(timeout) is bool or not math.isfinite(timeout) or timeout <= 0:
+    async def destroy(self, ref: WorkspaceRef) -> None:
+        """Kill a sandbox by ref. One that is already gone returns quietly."""
+        if ref.provider != PROVIDER:
             raise ValueError(
-                f"default_command_timeout must be a positive finite number, got {timeout!r}."
+                f"unsupported workspace provider {ref.provider!r}; expected {PROVIDER!r}"
             )
+        await destroy_sandbox(ref.id)
 
-        ceiling = self.max_command_timeout
-        if ceiling is not None and (type(ceiling) is not int or ceiling <= 0):
-            raise ValueError(
-                f"max_command_timeout must be a positive integer or None, got {ceiling!r}."
-            )
+    def get_workspace(
+        self, ctx: RunContext[AgentDepsT], *, ref: WorkspaceRef | None
+    ) -> WorkspaceBackend | None:
+        """Build the backend for this run. No I/O here: it creates or attaches on first use."""
+        del ctx
+        if ref is not None and ref.provider != PROVIDER:
+            return None
+        return self._new_backend(ref)
 
-        if self.instructions is not None and type(self.instructions) is not str:
-            raise ValueError(f"instructions must be a string or None, got {self.instructions!r}.")
-
-    def _command_ceiling_hint(self, rejected: list[str]) -> str:
-        if "sandbox_timeout" not in rejected:
-            return ""
-        return (
-            " To raise the per-command timeout ceiling on a reused sandbox, "
-            "set `max_command_timeout`."
-        )
-
-    def _non_default_owned_settings(self) -> list[str]:
-        return [
-            name
-            for name, value, default in (
-                ("image", self.image, _DEFAULT_IMAGE),
-                ("sandbox_timeout", self.sandbox_timeout, _DEFAULT_SANDBOX_TIMEOUT),
-                ("workdir", self.workdir, None),
-                ("env", self.env, None),
-            )
-            if value != default
-        ]
-
-    def get_instructions(self) -> str | None:
-        if self.instructions is not None:
-            return self.instructions or None
-        reused = self.sandbox_id is not None or self.session is not None
-        template = _ATTACHED_INSTRUCTIONS if reused else _OWNED_INSTRUCTIONS
-        ceiling = (
-            self.max_command_timeout
-            if self.max_command_timeout is not None
-            else self.sandbox_timeout
-        )
-        default_timeout = min(max(1, math.ceil(self.default_command_timeout)), ceiling)
-        return template.format(default_timeout=default_timeout, max_timeout=ceiling)
-
-    def get_toolset(self) -> AgentToolset[AgentDepsT]:
-        return OpenSandboxToolset[AgentDepsT](
+    def _new_backend(self, ref: WorkspaceRef | None) -> OpenSandboxBackend:
+        return OpenSandboxBackend(
+            ref=ref,
             image=self.image,
-            sandbox_id=self.sandbox_id,
             sandbox_timeout=self.sandbox_timeout,
-            workdir=self.workdir,
-            default_command_timeout=self.default_command_timeout,
-            max_command_timeout=self.max_command_timeout,
-            max_output_bytes=self.max_output_bytes,
-            max_output_lines=self.max_output_lines,
-            max_read_bytes=self.max_read_bytes,
+            working_dir=self.working_dir,
             env=self.env,
-            session=self.session,
         )

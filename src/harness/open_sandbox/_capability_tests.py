@@ -1,63 +1,52 @@
-"""Unit tests for OpenSandbox capability configuration and instructions."""
+"""Unit tests for OpenSandbox capability configuration. No live server."""
 
 import pytest
+from pydantic_ai.exceptions import UserError
+from pydantic_ai.workspaces import WorkspaceRef
 
-from harness.open_sandbox import OpenSandbox, OpenSandboxSession
-from harness.open_sandbox._session import DEFAULT_IMAGE, DEFAULT_SANDBOX_TIMEOUT
+from harness.open_sandbox import OpenSandbox, OpenSandboxBackend
+from harness.open_sandbox._backend import DEFAULT_IMAGE, DEFAULT_SANDBOX_TIMEOUT, PROVIDER
 
 
-def test_owned_defaults_and_instructions():
+def test_owned_defaults_build_a_backend_without_io():
     cap = OpenSandbox()
+    backend = cap.get_workspace(None, ref=None)  # type: ignore[arg-type]
     assert cap.image == DEFAULT_IMAGE
     assert cap.sandbox_timeout == DEFAULT_SANDBOX_TIMEOUT
-    instructions = cap.get_instructions()
-    assert instructions is not None
-    assert "ephemeral" in instructions
-    assert "run_command" in instructions
-    assert "60s" in instructions
+    assert isinstance(backend, OpenSandboxBackend)
+    assert backend.ref is None
 
 
-def test_attached_instructions_mention_persistence():
-    cap = OpenSandbox(sandbox_id="sbx-1")
-    instructions = cap.get_instructions()
-    assert instructions is not None
-    assert "persists across runs" in instructions
+def test_get_workspace_ignores_a_foreign_provider():
+    ref = WorkspaceRef(provider="e2b", id="sbx-1")
+    assert OpenSandbox().get_workspace(None, ref=ref) is None  # type: ignore[arg-type]
 
 
-def test_custom_instructions_override_and_empty_disables():
-    assert OpenSandbox(instructions="Use the box.").get_instructions() == "Use the box."
-    assert OpenSandbox(instructions="").get_instructions() is None
+def test_get_workspace_attaches_to_an_opensandbox_ref():
+    ref = WorkspaceRef(provider=PROVIDER, id="sbx-1")
+    backend = OpenSandbox().get_workspace(None, ref=ref)  # type: ignore[arg-type]
+    assert isinstance(backend, OpenSandboxBackend)
+    assert backend.ref == ref
 
 
-def test_session_rejects_sandbox_id_and_owned_settings():
-    session = OpenSandboxSession()
-    with pytest.raises(ValueError, match="session"):
-        OpenSandbox(session=session, sandbox_id="sbx-1")
-    with pytest.raises(ValueError, match="image"):
-        OpenSandbox(session=session, image="python:3.12-slim")
+def test_backend_helper_rejects_a_foreign_provider():
+    ref = WorkspaceRef(provider="e2b", id="sbx-1")
+    with pytest.raises(ValueError, match="opensandbox"):
+        OpenSandbox().backend(ref)
 
 
-def test_attach_rejects_owned_settings():
-    with pytest.raises(ValueError, match="image"):
-        OpenSandbox(sandbox_id="sbx-1", image="python:3.12-slim")
-    with pytest.raises(ValueError, match="sandbox_timeout"):
-        OpenSandbox(sandbox_id="sbx-1", sandbox_timeout=600)
-
-
-def test_owned_rejects_command_ceiling_above_sandbox_lifetime():
-    with pytest.raises(ValueError, match="max_command_timeout"):
-        OpenSandbox(sandbox_timeout=60, max_command_timeout=120)
-
-
-def test_rejects_non_positive_limits():
+def test_rejects_non_positive_timeout_and_relative_working_dir():
     with pytest.raises(ValueError, match="sandbox_timeout"):
         OpenSandbox(sandbox_timeout=0)
-    with pytest.raises(ValueError, match="default_command_timeout"):
-        OpenSandbox(default_command_timeout=-1)
+    with pytest.raises(ValueError, match="working_dir"):
+        OpenSandbox(working_dir="relative")
 
 
-def test_get_toolset_builds_open_sandbox_toolset():
-    from harness.open_sandbox._toolset import OpenSandboxToolset
+def test_rejects_defer_loading():
+    with pytest.raises(UserError, match="defer_loading"):
+        OpenSandbox(defer_loading=True)
 
-    toolset = OpenSandbox().get_toolset()
-    assert isinstance(toolset, OpenSandboxToolset)
+
+def test_rejects_non_string_env():
+    with pytest.raises(UserError, match="env"):
+        OpenSandbox(env={"PATH": 1})  # type: ignore[dict-item]
