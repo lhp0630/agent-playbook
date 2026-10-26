@@ -8,13 +8,13 @@ agent-playbook 将 YAML Agent Spec 封装为基于 pydantic-ai [`Capability`](ht
 
 - Spec 驱动的 Agent（`Agent.from_file` with capabilities）。加载了两个及以上 Spec 时，网页对话从路由 Agent 进入
 - [`Playbook`](src/harness/playbook)：命名 Skill 节点、DynamicWorkflow 编排、可选 MCP
-- [`OpenSandbox`](src/harness/open_sandbox)：隔离容器中的 shell / 文件工具，用于执行不可信代码
+- [`OpenSandbox`](src/harness/open_sandbox)：隔离容器 workspace，用于执行不可信代码
 - 内置 `code-review`，使用 `@zereight/mcp-gitlab` MCP
 - 内置 `outlook-mail`，使用 `@softeria/ms-365-mcp-server` MCP
 
 ## 安装
 
-Python 3.10+，依赖管理使用 [uv](https://docs.astral.sh/uv/)（已包含 `pydantic-ai-harness[dynamic-workflow]` 与 `pydantic-ai-skills[opensandbox]`）：
+Python 3.10+，依赖管理使用 [uv](https://docs.astral.sh/uv/)（已包含 `pydantic-ai-harness[dynamic-workflow]`、`pydantic-ai-skills` 与 `opensandbox`）：
 
 ```bash
 git clone --recurse-submodules https://github.com/lhp0630/agent-playbook.git && cd agent-playbook
@@ -115,15 +115,17 @@ agent = Agent(
 
 ```python
 from pydantic_ai import Agent
+from pydantic_ai_harness.filesystem import FileSystem
+from pydantic_ai_harness.shell import Shell
 from harness.open_sandbox import OpenSandbox
 
 agent = Agent(
     'openai:ornith:35b',
-    capabilities=[OpenSandbox()],
+    capabilities=[OpenSandbox(), Shell(), FileSystem()],
 )
 ```
 
-工具、生命周期模式与 Agent Spec YAML 见 [`src/harness/open_sandbox/README.md`](src/harness/open_sandbox/README.md)。
+workspace、生命周期与 Agent Spec YAML 见 [`src/harness/open_sandbox/README.md`](src/harness/open_sandbox/README.md)。
 
 ## 示例
 

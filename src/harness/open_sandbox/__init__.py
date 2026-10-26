@@ -1,27 +1,16 @@
-"""OpenSandbox capability: gives agents an isolated container sandbox to work in.
+"""OpenSandbox capability: gives an agent run an isolated container workspace.
 
-`OpenSandbox` is the supported entry point; build an agent with it and use its tools.
-`OpenSandboxSession` exposes lower-level lifecycle, command, and file access for
-applications that need to share a caller-owned sandbox across runs. The model-facing
-toolset remains an implementation detail of the capability.
+``OpenSandbox`` is the supported entry point. Compose it with tools that use
+``ctx.workspace``, such as ``Shell`` and ``FileSystem``.
+``OpenSandboxBackend`` is the OpenSandbox implementation of Pydantic AI's workspace
+backend protocols, for applications that create or attach to a sandbox themselves
+and pass it to a run as ``workspace=``.
 """
 
+from harness.open_sandbox._backend import OpenSandboxBackend
 from harness.open_sandbox._capability import OpenSandbox
-from harness.open_sandbox._session import (
-    OpenSandboxAuthError,
-    OpenSandboxError,
-    OpenSandboxExecResult,
-    OpenSandboxSession,
-    OpenSandboxTerminalError,
-    OpenSandboxUnavailableError,
-)
 
 __all__ = [
     "OpenSandbox",
-    "OpenSandboxAuthError",
-    "OpenSandboxError",
-    "OpenSandboxExecResult",
-    "OpenSandboxSession",
-    "OpenSandboxTerminalError",
-    "OpenSandboxUnavailableError",
+    "OpenSandboxBackend",
 ]
