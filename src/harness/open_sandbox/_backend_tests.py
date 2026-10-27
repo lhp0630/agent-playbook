@@ -1,12 +1,16 @@
 """Unit tests for OpenSandboxBackend against a fake sandbox. No live server."""
 
+import shlex
 from types import SimpleNamespace
 
 import pytest
 from pydantic_ai.workspaces import (
     SupportsCommands,
     SupportsFilesystem,
+    SupportsRealpath,
+    Workspace,
     WorkspaceBackend,
+    WorkspaceError,
     WorkspaceOutputLimitError,
     WorkspaceRef,
     WorkspaceTimeoutError,
@@ -15,6 +19,7 @@ from pydantic_ai.workspaces import (
 from harness.open_sandbox import OpenSandboxBackend
 from harness.open_sandbox._backend import (
     _MAX_OUTPUT_BYTES,
+    _REALPATH_SCRIPT,
     PROVIDER,
     _command_line,
     _result_from_execution,
@@ -78,9 +83,19 @@ class _Commands:
     def __init__(self, execution: object) -> None:
         self.execution = execution
         self.calls: list[tuple[str, object]] = []
+        self.realpath_map: dict[str, str] = {}
+        self.realpath_exit_code = 0
+        self.realpath_stderr = ""
 
     async def run(self, command: str, *, opts: object = None) -> object:
         self.calls.append((command, opts))
+        # Simulate in-container os.path.realpath for SupportsRealpath unit tests.
+        if _REALPATH_SCRIPT in command:
+            path = shlex.split(command)[-1]
+            if self.realpath_exit_code != 0:
+                return _ok_execution(stderr=self.realpath_stderr, exit_code=self.realpath_exit_code)
+            resolved = self.realpath_map.get(path, path)
+            return _ok_execution(resolved)
         return self.execution
 
 
@@ -120,6 +135,7 @@ def test_backend_implements_workspace_protocols():
     assert isinstance(backend, WorkspaceBackend)
     assert isinstance(backend, SupportsCommands)
     assert isinstance(backend, SupportsFilesystem)
+    assert isinstance(backend, SupportsRealpath)
 
 
 def test_injected_sandbox_records_its_ref_without_creating_another():
@@ -221,3 +237,49 @@ async def test_read_directory_raises_is_a_directory():
     store.dirs.add("/workspace/nested")
     with pytest.raises(IsADirectoryError):
         await backend.read_bytes("/workspace/nested")
+
+
+async def test_realpath_keeps_the_working_dir_and_missing_names():
+    backend, _, commands = _backend()
+    assert await backend.realpath("/workspace") == "/workspace"
+    missing = "/workspace/.missing-name"
+    assert await backend.realpath(missing) == missing
+    line, _ = commands.calls[0]
+    assert "python3" in line
+    assert _REALPATH_SCRIPT in line
+    assert "base64" not in line
+
+
+async def test_realpath_follows_a_symlink_map_from_the_container():
+    backend, _, commands = _backend()
+    commands.realpath_map["/workspace/link"] = "/workspace/target"
+    assert await backend.realpath("/workspace/link") == "/workspace/target"
+
+
+async def test_realpath_keeps_a_trailing_newline_in_the_resolved_path():
+    """POSIX allows `\\n` in a name; do not strip it the way shell substitution would."""
+    backend, _, _ = _backend()
+    weird = "/workspace/ends-with-newline\n"
+    assert await backend.realpath(weird) == weird
+
+
+async def test_realpath_joins_a_relative_path_onto_the_working_dir():
+    backend, _, _ = _backend()
+    assert await backend.realpath("nested") == "/workspace/nested"
+
+
+async def test_realpath_raises_when_python3_fails():
+    backend, _, commands = _backend()
+    commands.realpath_exit_code = 127
+    commands.realpath_stderr = "python3: not found"
+    with pytest.raises(WorkspaceError, match="python3"):
+        await backend.realpath("/workspace")
+
+
+async def test_workspace_realpath_uses_native_supports_realpath():
+    """Regression: FileSystem root checks must not hit the shell sized-base64 codec."""
+    backend, _, commands = _backend()
+    assert await Workspace(backend).realpath("/workspace") == "/workspace"
+    assert commands.calls
+    assert all("base64" not in line for line, _ in commands.calls)
+    assert any(_REALPATH_SCRIPT in line for line, _ in commands.calls)
