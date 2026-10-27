@@ -21,6 +21,7 @@ from pydantic_ai.workspaces import (
     FileEntry,
     SupportsCommands,
     SupportsFilesystem,
+    SupportsRealpath,
     WorkspaceBackend,
     WorkspaceCommand,
     WorkspaceError,
@@ -51,6 +52,10 @@ _OUTPUT_PREVIEW_CHARS = 64 * 1024
 # execd does ParseUint(Itoa(mode), 8): the JSON number is octal digits, so 644
 # becomes 0o644. A Python octal literal 0o644 is 420 and becomes mode 0o420.
 _FILE_MODE = 644
+# In-container resolution matching LocalWorkspaceBackend / os.path.realpath(strict=False).
+# Avoids Workspace's shell realpath fallback (sized base64 over SSE), which OpenSandbox
+# stdout chunking has broken for FileSystem root checks.
+_REALPATH_SCRIPT = "import os, sys; sys.stdout.write(os.path.realpath(sys.argv[1]))"
 
 _PATH_ERRORS: tuple[tuple[str, type[OSError]], ...] = (
     ("already exists", FileExistsError),
@@ -232,13 +237,15 @@ def _translate(
     return error
 
 
-class OpenSandboxBackend(WorkspaceBackend, SupportsCommands, SupportsFilesystem):
+class OpenSandboxBackend(WorkspaceBackend, SupportsCommands, SupportsFilesystem, SupportsRealpath):
     """An OpenSandbox container as a Pydantic AI workspace backend.
 
     Commands and file operations run inside the container, not on the host. File
-    operations use the sandbox's ``files`` service. Building one does no I/O. The
-    first operation creates a sandbox or attaches to ``ref``. The backend does not
-    kill the sandbox; whoever holds the ref does, via ``OpenSandbox.destroy``.
+    operations use the sandbox's ``files`` service. ``realpath`` runs
+    ``os.path.realpath`` in the container so ``FileSystem`` root checks do not
+    depend on the shell filesystem's sized-base64 codec. Building one does no I/O.
+    The first operation creates a sandbox or attaches to ``ref``. The backend does
+    not kill the sandbox; whoever holds the ref does, via ``OpenSandbox.destroy``.
 
     Args:
         sandbox: A live ``opensandbox.Sandbox``. Whoever created it owns killing it.
@@ -387,6 +394,33 @@ class OpenSandboxBackend(WorkspaceBackend, SupportsCommands, SupportsFilesystem)
         await self._sandbox_for_operation()
         assert self._resolved_working_dir is not None
         return self._resolved_working_dir
+
+    async def realpath(self, path: str) -> str:
+        """Resolve symlinks inside the container, like ``os.path.realpath(strict=False)``.
+
+        Missing components stay as written, including a trailing ``\\n`` in a name.
+        Relative paths join onto the working directory first. Uses in-container
+        ``python3`` so ``FileSystem`` does not fall back to the shell sized-base64
+        ``realpath`` codec.
+        """
+        if not posixpath.isabs(path):
+            path = posixpath.join(await self.working_dir(), path)
+        result = await self.run(
+            ["python3", "-c", _REALPATH_SCRIPT, path],
+            timeout=_INTERNAL_EXEC_TIMEOUT,
+        )
+        if result.exit_code != 0:
+            detail = result.stderr.strip() or f"exit code {result.exit_code}"
+            raise WorkspaceError(f"Could not resolve {path!r} in the OpenSandbox: {detail}")
+        # Keep stdout intact: POSIX names may end in `\n`, and the script / SSE path do
+        # not add one. Stripping would break Workspace root checks the way losing a
+        # trailing newline in a shell `realpath` would — hence the base64 codec there.
+        resolved = result.stdout
+        if not posixpath.isabs(resolved):
+            raise WorkspaceError(
+                f"Could not resolve {path!r} in the OpenSandbox: python3 printed {result.stdout!r}."
+            )
+        return posixpath.normpath(resolved)
 
     async def run(
         self,
