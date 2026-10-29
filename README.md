@@ -2,15 +2,14 @@
 
 [中文](README_CN.md) | [English](README.md)
 
-agent-playbook turns YAML agent specs into a pydantic-ai [`Capability`](https://ai.pydantic.dev/capabilities/)-based agent: named skill nodes, DynamicWorkflow orchestration, optional MCP tools, and an isolated OpenSandbox for untrusted code.
+Agents driven by YAML Agent Specs.
 
 ## Features
 
-- Spec-driven agents from YAML (`Agent.from_file` with capabilities). With two or more specs loaded, the web chat enters through a routing agent
-- [`Playbook`](src/harness/playbook): named skill nodes, DynamicWorkflow orchestration, optional MCP
-- [`OpenSandbox`](src/harness/open_sandbox): isolated container workspace for untrusted code
-- Built-in `code-review`, using `@zereight/mcp-gitlab` MCP
-- Built-in `outlook-mail`, using `@softeria/ms-365-mcp-server` MCP
+- With multiple Playbook Specs loaded, entry goes through a routing agent
+- Configurable Workflow orchestration across multi-node agents
+- Configurable MCP tools
+- Sandbox for running untrusted code or CLI commands
 
 ## Installation
 
