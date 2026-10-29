@@ -2,15 +2,14 @@
 
 [中文](README_CN.md) | [English](README.md)
 
-agent-playbook 将 YAML Agent Spec 封装为基于 pydantic-ai [`Capability`](https://ai.pydantic.dev/capabilities/) 的智能体：命名 Skill 节点、DynamicWorkflow 编排、可选 MCP 工具，以及用于执行不可信代码的隔离 OpenSandbox。
+由 YAML 格式 Agent Spec 驱动的智能体。
 
 ## 功能
 
-- Spec 驱动的 Agent（`Agent.from_file` with capabilities）。加载了两个及以上 Spec 时，网页对话从路由 Agent 进入
-- [`Playbook`](src/harness/playbook)：命名 Skill 节点、DynamicWorkflow 编排、可选 MCP
-- [`OpenSandbox`](src/harness/open_sandbox)：隔离容器 workspace，用于执行不可信代码
-- 内置 `code-review`，使用 `@zereight/mcp-gitlab` MCP
-- 内置 `outlook-mail`，使用 `@softeria/ms-365-mcp-server` MCP
+- 加载多个 Playbook Spec 时，经路由智能体进入
+- 支持配置 Workflow，编排多节点智能体
+- 支持配置 MCP 工具
+- 沙箱环境，可运行不受信任的代码或命令行
 
 ## 安装
 
