@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from collections.abc import Mapping
+from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, field
 
 from pydantic_ai.capabilities import AbstractCapability
@@ -65,6 +65,14 @@ class OpenSandbox(AbstractCapability[AgentDepsT]):
     env: Mapping[str, str] | None = field(default=None, repr=False)
     """Environment variables every command gets. Nothing is read from the host."""
 
+    volumes: Sequence[str] | None = None
+    """Compose short-syntax mounts applied when creating a sandbox.
+
+    Each entry is ``name:mount_path`` or ``name:mount_path:ro`` (named PVC). Host
+    binds and remote URIs are rejected. ``None`` (default) mounts nothing. Ignored
+    when attaching by ref.
+    """
+
     def __post_init__(self) -> None:
         if self.defer_loading:
             raise UserError(
@@ -114,4 +122,5 @@ class OpenSandbox(AbstractCapability[AgentDepsT]):
             sandbox_timeout=self.sandbox_timeout,
             working_dir=self.working_dir,
             env=self.env,
+            volumes=self.volumes,
         )

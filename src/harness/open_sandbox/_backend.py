@@ -16,6 +16,7 @@ from math import isfinite
 from typing import TYPE_CHECKING, Any
 
 import anyio
+from opensandbox.models import Volume
 from pydantic_ai.workspaces import (
     CommandResult,
     FileEntry,
@@ -30,6 +31,8 @@ from pydantic_ai.workspaces import (
     WorkspaceTimeoutError,
     WorkspaceUnavailableError,
 )
+
+from harness.open_sandbox._scheme import check_volume_specs, check_volumes
 
 if TYPE_CHECKING:
     from opensandbox import Sandbox
@@ -256,6 +259,9 @@ class OpenSandboxBackend(WorkspaceBackend, SupportsCommands, SupportsFilesystem,
             against. ``None`` uses the container's own directory, discovered with
             ``pwd -P`` on first use. Created when this backend creates the sandbox.
         env: Environment variables every command gets. Nothing is read from the host.
+        volumes: Compose short-syntax mounts (``name:mount_path[:ro|rw]``) applied when
+            this backend creates a sandbox. Shape-checked at init; materialized at create.
+            Ignored when attaching by ref.
     """
 
     def __init__(
@@ -267,6 +273,7 @@ class OpenSandboxBackend(WorkspaceBackend, SupportsCommands, SupportsFilesystem,
         sandbox_timeout: int = DEFAULT_SANDBOX_TIMEOUT,
         working_dir: str | None = None,
         env: Mapping[str, str] | None = None,
+        volumes: Sequence[str] | None = None,
     ) -> None:
         if ref is not None and ref.provider != PROVIDER:
             raise ValueError(
@@ -284,6 +291,7 @@ class OpenSandboxBackend(WorkspaceBackend, SupportsCommands, SupportsFilesystem,
         self._working_dir = _check_working_dir(working_dir)
         self._resolved_working_dir = self._working_dir
         self._env = _check_env(env)
+        self._volumes = check_volume_specs(volumes)
         self._lock = anyio.Lock()
 
     @property
@@ -327,12 +335,14 @@ class OpenSandboxBackend(WorkspaceBackend, SupportsCommands, SupportsFilesystem,
     async def _create(self) -> Sandbox:
         sandbox_cls = _require_opensandbox()
         created: Sandbox | None = None
+        volumes: list[Volume] | None = check_volumes(self._volumes)
         with anyio.move_on_after(_CREATE_TIMEOUT, shield=True):
             async with self._sdk_errors(None, "Could not start OpenSandbox"):
                 created = await sandbox_cls.create(
                     self._image,
                     env=self._env,
                     timeout=timedelta(seconds=self._sandbox_timeout),
+                    volumes=volumes,
                 )
         if created is None:
             raise TimeoutError(
