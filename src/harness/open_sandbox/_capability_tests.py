@@ -13,8 +13,22 @@ def test_owned_defaults_build_a_backend_without_io():
     backend = cap.get_workspace(None, ref=None)  # type: ignore[arg-type]
     assert cap.image == DEFAULT_IMAGE
     assert cap.sandbox_timeout == DEFAULT_SANDBOX_TIMEOUT
+    assert cap.volumes is None
     assert isinstance(backend, OpenSandboxBackend)
     assert backend.ref is None
+    assert backend._volumes is None  # pyright: ignore[reportPrivateUsage]
+
+
+def test_passes_compose_volumes_to_the_backend():
+    cap = OpenSandbox(volumes=["data:/var/lib/data"])
+    backend = cap.get_workspace(None, ref=None)  # type: ignore[arg-type]
+    assert isinstance(backend, OpenSandboxBackend)
+    assert backend._volumes == ["data:/var/lib/data"]  # pyright: ignore[reportPrivateUsage]
+
+
+def test_rejects_host_bind_volumes():
+    with pytest.raises(ValueError, match="host path"):
+        OpenSandbox(volumes=["/host/data:/var/lib/data"])
 
 
 def test_get_workspace_ignores_a_foreign_provider():

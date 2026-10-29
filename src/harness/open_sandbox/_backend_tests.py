@@ -26,6 +26,19 @@ from harness.open_sandbox._backend import (
 )
 
 
+def test_backend_accepts_compose_volume_specs():
+    backend = OpenSandboxBackend(volumes=["data:/var/lib/data", "cache:/cache:ro"])
+    assert backend._volumes == [  # pyright: ignore[reportPrivateUsage]
+        "data:/var/lib/data",
+        "cache:/cache:ro",
+    ]
+
+
+def test_backend_rejects_host_bind_volumes():
+    with pytest.raises(ValueError, match="host path"):
+        OpenSandboxBackend(volumes=["/host/data:/var/lib/data"])
+
+
 class _Files:
     def __init__(self) -> None:
         self.data: dict[str, bytes] = {}
