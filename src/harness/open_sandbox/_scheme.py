@@ -8,9 +8,15 @@ from __future__ import annotations
 
 import posixpath
 from collections.abc import Sequence
+from typing import TYPE_CHECKING
 from urllib.parse import urlsplit
 
-from opensandbox.models import PVC, Volume
+if TYPE_CHECKING:
+    from opensandbox.models import Volume
+
+_MISSING_SDK = (
+    "OpenSandbox requires the 'opensandbox' package. Install it with `uv add opensandbox`."
+)
 
 # region Compose short-syntax volumes
 # Parse ``source:mount_path[:ro|rw]`` into an OpenSandbox ``Volume``.
@@ -105,6 +111,10 @@ def parse_compose_volume(entry: object) -> Volume:
 
     Host binds (``/path:...`` or ``./path:...``) and remote URIs are rejected.
     """
+    try:
+        from opensandbox.models import PVC, Volume
+    except ImportError as exc:
+        raise ImportError(_MISSING_SDK) from exc
     stripped = check_compose_volume_shape(entry)
     source, mount_path, read_only = split_compose_volume(stripped)
     return Volume(

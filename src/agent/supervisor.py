@@ -1,6 +1,6 @@
-"""Route a web chat turn to one loaded agent spec.
+"""Supervise a web chat turn onto one loaded agent spec.
 
-The routing agent is the only web entry when several specs are loaded. Each
+The supervisor agent is the only web entry when several specs are loaded. Each
 specialist keeps its own message history for a conversation, so a later handoff
 does not carry another agent's tool records.
 """
@@ -31,7 +31,7 @@ from harness.playbook._toolset import normalize_models, normalize_name, resolve_
 
 CUSTOM_CAPABILITY_TYPES: list[type[AbstractCapability[Any]]] = [Playbook, OpenSandbox]
 
-ROUTER_INSTRUCTIONS = """
+SUPERVISOR_INSTRUCTIONS = """
 You route each user message to one agent.
 Answer by calling one tool, or by asking a clarifying question.
 Each tool is one agent. Call the tool whose description matches the message.
@@ -48,7 +48,7 @@ After a tool returns, that result is the reply to the user.
 
 @dataclass(frozen=True)
 class AgentRoute:
-    """One loaded spec the router can hand a turn to."""
+    """One loaded spec the supervisor can hand a turn to."""
 
     name: str
     description: str
@@ -60,14 +60,14 @@ class WebEntry:
     """How to serve the loaded specs.
 
     `route` is set when exactly one spec is loaded and should be served directly.
-    It is None when the routing agent is the web entry.
+    It is None when the supervisor agent is the web entry.
     """
 
     route: AgentRoute | None
 
 
 def build_agent_catalog(specs: Sequence[tuple[Path, AgentSpec]]) -> list[AgentRoute]:
-    """Build the routing catalog from loaded specs.
+    """Build the supervisor catalog from loaded specs.
 
     Specs without a name or description are omitted: the model selects a tool by
     that description. Two specs that normalize to the same name would be the same
@@ -216,7 +216,7 @@ class SpecialistPool:
         return agent
 
 
-def _make_handoff(router: AgentRouter, route: AgentRoute):
+def _make_handoff(supervisor: Supervisor, route: AgentRoute):
     """Bind the target agent outside the tool signature.
 
     pydantic-ai publishes every parameter except ``RunContext`` in the tool schema.
@@ -229,19 +229,19 @@ def _make_handoff(router: AgentRouter, route: AgentRoute):
         Args:
             task: The user request, including URLs and explicit confirmations.
         """
-        return await router.handoff(ctx, route, task)
+        return await supervisor.handoff(ctx, route, task)
 
     return handoff
 
 
-def _router_function_toolset(
-    router: AgentRouter,
+def _supervisor_function_toolset(
+    supervisor: Supervisor,
     routes: Sequence[AgentRoute],
 ) -> FunctionToolset[Any]:
-    toolset: FunctionToolset[Any] = FunctionToolset(id="agent-router", sequential=True)
+    toolset: FunctionToolset[Any] = FunctionToolset(id="agent-supervisor", sequential=True)
     for route in routes:
         toolset.add_function(
-            _make_handoff(router, route),
+            _make_handoff(supervisor, route),
             name=route.name,
             description=route.description,
             sequential=True,
@@ -249,20 +249,20 @@ def _router_function_toolset(
     return toolset
 
 
-class AgentRouterToolset(FunctionToolset[Any]):
+class SupervisorToolset(FunctionToolset[Any]):
     """Expose one handoff tool per catalog entry for this run."""
 
-    def __init__(self, router: AgentRouter) -> None:
-        super().__init__(id="agent-router", sequential=True)
-        self._router = router
+    def __init__(self, supervisor: Supervisor) -> None:
+        super().__init__(id="agent-supervisor", sequential=True)
+        self._supervisor = supervisor
 
     async def for_run(self, ctx: RunContext[Any]) -> AbstractToolset[Any]:
-        routes = build_agent_catalog(self._router.specs())
-        return _router_function_toolset(self._router, routes)
+        routes = build_agent_catalog(self._supervisor.specs())
+        return _supervisor_function_toolset(self._supervisor, routes)
 
 
 @dataclass(kw_only=True)
-class AgentRouter(AbstractCapability[Any]):
+class Supervisor(AbstractCapability[Any]):
     """Handoff tools for the loaded agent specs, plus each specialist's history."""
 
     specs: Callable[[], Sequence[tuple[Path, AgentSpec]]]
@@ -284,10 +284,10 @@ class AgentRouter(AbstractCapability[Any]):
         return None
 
     def get_instructions(self) -> str:
-        return ROUTER_INSTRUCTIONS
+        return SUPERVISOR_INSTRUCTIONS
 
-    def get_toolset(self) -> AgentRouterToolset:
-        return AgentRouterToolset(self)
+    def get_toolset(self) -> SupervisorToolset:
+        return SupervisorToolset(self)
 
     async def handoff(self, ctx: RunContext[Any], route: AgentRoute, task: str) -> str:
         """Run the specialist with this conversation's history for that agent only."""
@@ -311,7 +311,7 @@ class AgentRouter(AbstractCapability[Any]):
     ) -> Any:
         """Use the specialist reply as this turn's output.
 
-        The tool return is appended first so the router transcript kept by to_web
+        The tool return is appended first so the supervisor transcript kept by to_web
         still shows which agent was called.
         """
         if not isinstance(node, CallToolsNode):
@@ -329,7 +329,8 @@ class AgentRouter(AbstractCapability[Any]):
         return End(FinalResult(output))
 
 
-def router_models() -> list[Model[Any]]:
-    """Model for the routing agent."""
-    # Only reads OPENAI_* env vars.
+def supervisor_models() -> list[Model[Any]]:
+    """Model for the supervisor agent."""
+    # TODO: Use the model the web UI selected for this turn as the supervisor
+    # model, instead of always taking models[0] from OPENAI_* env vars.
     return resolve_models(None, [])

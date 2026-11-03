@@ -6,21 +6,21 @@
 
 ## 功能
 
-- 加载多个 Playbook Spec 时，经路由智能体进入
+- 加载多个 Playbook Spec 时，经 supervisor 智能体进入
 - 支持配置 Workflow，编排多节点智能体
 - 支持配置 MCP 工具
 - 沙箱环境，可运行不受信任的代码或命令行
 
 ## 安装
 
-Python 3.10+，依赖管理使用 [uv](https://docs.astral.sh/uv/)（已包含 `pydantic-ai-harness[dynamic-workflow]`、`pydantic-ai-skills` 与 `opensandbox`）：
+Python 3.11+，依赖管理使用 [uv](https://docs.astral.sh/uv/)（已包含 `pydantic-ai-harness` 与 `pydantic-ai-skills`）：
 
 ```bash
 git clone --recurse-submodules https://github.com/lhp0630/agent-playbook.git && cd agent-playbook
 uv sync --all-groups --extra agent
 ```
 
-`--extra agent` 会安装服务端依赖（`fire`、`uvicorn` 等）。可复用库在 `src/harness/` 的 `harness` 包；CLI/Web 应用在 `src/agent/` 的 `agent` 包。
+`--extra agent` 会安装服务端依赖（`fire`、`uvicorn`、`pyyaml`、`opensandbox` 等）。可复用库在 `src/harness/` 的 `harness` 包；CLI/Web 应用在 `src/agent/` 的 `agent` 包。
 
 若已克隆但未拉取子模块：
 
@@ -63,7 +63,7 @@ agent
 
 ## 网页对话
 
-加载了多个 Agent Spec 时，网页对话的唯一入口是路由 Agent。它决定把这一轮转交给某一个 Agent，或向用户追问。路由 capability 按会话保存每个 Agent 的完整 message history。同一会话里来回切换 Agent 时，各自的历史都还在：交给 outlook-mail 的历史不会带上 code-review 的工具记录。路由 Agent 自己的聊天记录仍由 `to_web` 保存，用来判断这一轮是不是在延续上一个 Agent。
+加载了多个 Agent Spec 时，网页对话的唯一入口是 supervisor Agent。它决定把这一轮转交给某一个 Agent，或向用户追问。supervisor capability 按会话保存每个 Agent 的完整 message history。同一会话里来回切换 Agent 时，各自的历史都还在：交给 outlook-mail 的历史不会带上 code-review 的工具记录。supervisor Agent 自己的聊天记录仍由 `to_web` 保存，用来判断这一轮是不是在延续上一个 Agent。
 
 只加载了一个 Spec 时，网页对话直接进入该 Agent。
 

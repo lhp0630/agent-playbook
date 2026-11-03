@@ -14,12 +14,12 @@ env_file = find_dotenv(usecwd=True)
 load_dotenv(env_file)
 
 from .config import CONFIG_MANAGER  # noqa: E402
-from .router import (  # noqa: E402
+from .supervisor import (  # noqa: E402
     CUSTOM_CAPABILITY_TYPES,
-    AgentRouter,
+    Supervisor,
     load_spec_agent,
     prepare_web_entry,
-    router_models,
+    supervisor_models,
 )
 
 
@@ -55,15 +55,15 @@ def startup_web(host: str = "127.0.0.1", port: int = 8000):
             print(str(exc), file=sys.stderr)
             raise SystemExit(1) from exc
     else:
-        models = router_models()
+        models = supervisor_models()
         if not models:
             print("No model configured for agent.", file=sys.stderr)
             raise SystemExit(1)
         agent = Agent(
             models[0],
-            name="router",
+            name="supervisor",
             capabilities=[
-                AgentRouter(
+                Supervisor(
                     specs=lambda: CONFIG_MANAGER.agent_specs,
                     custom_capability_types=CUSTOM_CAPABILITY_TYPES,
                 )

@@ -16,7 +16,6 @@ from math import isfinite
 from typing import TYPE_CHECKING, Any
 
 import anyio
-from opensandbox.models import Volume
 from pydantic_ai.workspaces import (
     CommandResult,
     FileEntry,
@@ -36,6 +35,7 @@ from harness.open_sandbox._scheme import check_volume_specs, check_volumes
 
 if TYPE_CHECKING:
     from opensandbox import Sandbox
+    from opensandbox.models import Volume
 
 PROVIDER = "opensandbox"
 DEFAULT_IMAGE = "opensandbox/code-interpreter:v1.1.0"

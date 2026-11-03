@@ -6,21 +6,21 @@ Agents driven by YAML Agent Specs.
 
 ## Features
 
-- With multiple Playbook Specs loaded, entry goes through a routing agent
+- With multiple Playbook Specs loaded, entry goes through a supervisor agent
 - Configurable Workflow orchestration across multi-node agents
 - Configurable MCP tools
 - Sandbox for running untrusted code or CLI commands
 
 ## Installation
 
-Python 3.10+. Uses [uv](https://docs.astral.sh/uv/) for dependencies (includes `pydantic-ai-harness[dynamic-workflow]`, `pydantic-ai-skills`, and `opensandbox`):
+Python 3.11+. Uses [uv](https://docs.astral.sh/uv/) for dependencies (includes `pydantic-ai-harness` and `pydantic-ai-skills`):
 
 ```bash
 git clone --recurse-submodules https://github.com/lhp0630/agent-playbook.git && cd agent-playbook
 uv sync --all-groups --extra agent
 ```
 
-`--extra agent` installs the server extras (`fire`, `uvicorn`, …). The reusable lib is the `harness` package under `src/harness/`; the CLI/web app is `agent` under `src/agent/`.
+`--extra agent` installs the server extras (`fire`, `uvicorn`, `pyyaml`, `opensandbox`, …). The reusable lib is the `harness` package under `src/harness/`; the CLI/web app is `agent` under `src/agent/`.
 
 If you already cloned without submodules:
 
@@ -63,7 +63,7 @@ Open `http://127.0.0.1:8000`. With both built-in specs loaded, ask for a code re
 
 ## Web chat
 
-With more than one agent spec loaded, the web chat's only entry is the routing agent. It decides whether to hand the turn off to one agent or ask a clarifying question. The routing capability holds each agent's complete message history for that conversation. When the conversation switches between agents, each history stays in place: the history handed to outlook-mail does not include code-review's tool records. The routing agent's own chat transcript is still stored by `to_web`, and the router uses it to decide whether the new message continues the previous agent.
+With more than one agent spec loaded, the web chat's only entry is the supervisor agent. It decides whether to hand the turn off to one agent or ask a clarifying question. The supervisor capability holds each agent's complete message history for that conversation. When the conversation switches between agents, each history stays in place: the history handed to outlook-mail does not include code-review's tool records. The supervisor agent's own chat transcript is still stored by `to_web`, and the supervisor uses it to decide whether the new message continues the previous agent.
 
 With a single spec loaded, the web chat talks to that agent directly.
 
