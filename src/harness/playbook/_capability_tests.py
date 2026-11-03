@@ -147,21 +147,20 @@ models:
 
 
 def test_load_codereview_agent_spec(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setenv("OPENAI_API_KEY", "sk-test")
-    monkeypatch.setenv("OPENAI_MODEL", "ornith:35b")
     monkeypatch.setenv("GITLAB_API_URL", "https://gitlab.example.com/api/v4")
     monkeypatch.setenv("GITLAB_PERSONAL_ACCESS_TOKEN", "glpat-x")
 
     from pydantic_ai import Agent
     from pydantic_ai.capabilities import CombinedCapability
+    from pydantic_ai.models.test import TestModel
 
-    from harness.playbook._toolset import resolve_models
+    from harness.models import Model
 
     path = Path(".agents") / "code-review.yaml"
     agent = Agent.from_file(
         path,
-        custom_capability_types=[Playbook],
-        model=resolve_models(None, [])[0],
+        custom_capability_types=[Playbook, Model],
+        model=TestModel(),
     )
     assert agent.name == "code-review"
     assert agent.description
@@ -176,8 +175,6 @@ def test_load_codereview_agent_spec(monkeypatch: pytest.MonkeyPatch) -> None:
 
 
 def test_load_outlook_mail_agent_spec(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setenv("OPENAI_API_KEY", "sk-test")
-    monkeypatch.setenv("OPENAI_MODEL", "ornith:35b")
     monkeypatch.setenv(
         "MS365_MCP_TOKEN_CACHE_PATH",
         "/tmp/ms365-mcp/.token-cache.json",
@@ -189,14 +186,15 @@ def test_load_outlook_mail_agent_spec(monkeypatch: pytest.MonkeyPatch) -> None:
 
     from pydantic_ai import Agent
     from pydantic_ai.capabilities import CombinedCapability
+    from pydantic_ai.models.test import TestModel
 
-    from harness.playbook._toolset import resolve_models
+    from harness.models import Model
 
     path = Path(".agents") / "outlook-mail.yaml"
     agent = Agent.from_file(
         path,
-        custom_capability_types=[Playbook],
-        model=resolve_models(None, [])[0],
+        custom_capability_types=[Playbook, Model],
+        model=TestModel(),
     )
     assert agent.name == "outlook-mail"
     assert agent.description
@@ -217,3 +215,21 @@ def test_load_outlook_mail_agent_spec(monkeypatch: pytest.MonkeyPatch) -> None:
         "MS365_MCP_TOKEN_CACHE_PATH",
         "MS365_MCP_SELECTED_ACCOUNT_PATH",
     ]
+
+
+def test_playbook_for_agent_inherits_sibling_model() -> None:
+    from pydantic_ai import Agent
+
+    from harness.models import Model
+
+    model_cap = Model(
+        model_providers=[{"name": "default", "base_url": "http://llm/v1", "api_key": "sk-config"}],
+        models=[{"name": "openai-chat:ornith:35b", "model_provider": "default"}],
+    )
+    playbook = Playbook(name="x", nodes=[])
+    agent = Agent(capabilities=[model_cap, playbook])
+    root = agent._root_capability
+    bound = next(cap for cap in root.capabilities if isinstance(cap, Playbook))
+    resolved = bound.resolve_models()
+    assert len(resolved) == 1
+    assert resolved[0].model_id == "openai:ornith:35b"

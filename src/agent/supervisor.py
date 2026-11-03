@@ -25,11 +25,17 @@ from pydantic_ai.tools import RunContext
 from pydantic_ai.toolsets import AbstractToolset, FunctionToolset
 from pydantic_graph import End
 
+from harness.models import Model as ModelCapability
+from harness.models import normalize_models, resolve_models
 from harness.open_sandbox import OpenSandbox
 from harness.playbook import Playbook
-from harness.playbook._toolset import normalize_models, normalize_name, resolve_models
+from harness.playbook._toolset import normalize_name
 
-CUSTOM_CAPABILITY_TYPES: list[type[AbstractCapability[Any]]] = [Playbook, OpenSandbox]
+CUSTOM_CAPABILITY_TYPES: list[type[AbstractCapability[Any]]] = [
+    Playbook,
+    ModelCapability,
+    OpenSandbox,
+]
 
 SUPERVISOR_INSTRUCTIONS = """
 You route each user message to one agent.
@@ -107,21 +113,19 @@ def prepare_web_entry(specs: Sequence[tuple[Path, AgentSpec]]) -> WebEntry:
 
 
 def resolve_models_for_spec(spec: AgentSpec) -> list[Model[Any]]:
-    """Prefer Playbook-configured models; fall back to OPENAI_* env vars."""
-    # TODO: Read models/model_providers from app_config and pass them into Playbook
-    # instead of pulling them from the playbook capability kwargs / OPENAI_* env.
-    for cap in spec.capabilities:
-        if cap.name != "Playbook":
-            continue
-        kwargs = cap.kwargs
-        models = resolve_models(
-            normalize_models(kwargs.get("models")),
-            kwargs.get("model_providers") or [],
-        )
-        if models:
-            return models
-    # Only reads OPENAI_* env vars.
-    return resolve_models(None, [])
+    """Resolve models from a Model capability, else Playbook-local models."""
+    for preferred in ("Model", "Playbook"):
+        for cap in spec.capabilities:
+            if cap.name != preferred:
+                continue
+            kwargs = cap.kwargs
+            models = resolve_models(
+                normalize_models(kwargs.get("models")),
+                kwargs.get("model_providers") or [],
+            )
+            if models:
+                return models
+    return []
 
 
 def load_spec_agent(
@@ -329,8 +333,18 @@ class Supervisor(AbstractCapability[Any]):
         return End(FinalResult(output))
 
 
-def supervisor_models() -> list[Model[Any]]:
-    """Model for the supervisor agent."""
-    # TODO: Use the model the web UI selected for this turn as the supervisor
-    # model, instead of always taking models[0] from OPENAI_* env vars.
-    return resolve_models(None, [])
+def supervisor_models(
+    specs: Sequence[tuple[Path, AgentSpec]] | None = None,
+) -> list[Model[Any]]:
+    """Models for the supervisor agent, taken from the first configured spec.
+
+    TODO: Use the model the web UI selected for this turn as the supervisor
+    model, instead of always taking models[0] from the first loaded spec.
+    """
+    if not specs:
+        return []
+    for _path, spec in specs:
+        models = resolve_models_for_spec(spec)
+        if models:
+            return models
+    return []

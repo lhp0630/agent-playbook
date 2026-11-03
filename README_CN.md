@@ -35,10 +35,9 @@ git submodule update --init --recursive
 复制 `.env.example` 为 `.env`，填入凭证：
 
 ```bash
-# 省略 playbook `models` 时的模型回退
-OPENAI_MODEL=...
-OPENAI_BASE_URL=...
-OPENAI_API_KEY=...
+# 可选 — 仅 name 的 Model 条目走 infer_model 时需要的厂商环境变量（anthropic:/google:/openai-chat:）
+# OPENAI_API_KEY=...
+# ANTHROPIC_API_KEY=...
 
 # 可选 — 启用 GitLab MCP，用于 GitLab 地址
 GITLAB_API_URL=https://gitlab.example.com/api/v4
@@ -74,15 +73,16 @@ agent
 ```python
 from pydantic_ai import Agent
 
+from harness.models import Model
 from harness.playbook import Playbook
 
 agent = Agent.from_file(
     '.agents/code-review.yaml',
-    custom_capability_types=[Playbook],
+    custom_capability_types=[Playbook, Model],
 )
 ```
 
-也可在代码中直接构造 Capability：
+也可在代码中直接构造 Playbook，并自带 `models` / `model_providers`：
 
 ```python
 from pydantic_ai import Agent
@@ -108,7 +108,7 @@ agent = Agent(
 )
 ```
 
-更多说明见 [`src/harness/playbook/README.md`](src/harness/playbook/README.md)。
+更多说明见 [`src/harness/playbook/README.md`](src/harness/playbook/README.md) 与 [`src/harness/models/`](src/harness/models/)。
 
 ### OpenSandbox
 

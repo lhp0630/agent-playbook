@@ -90,6 +90,8 @@ Playbook(
 )
 ```
 
+When `models` / `model_providers` are omitted, Playbook can inherit them from a sibling [`Model`](../models/) capability. Name-only model entries (no `model_provider`) use pydantic-ai `infer_model`.
+
 ## Further reading
 
 - [Pydantic AI capabilities](https://ai.pydantic.dev/capabilities/)

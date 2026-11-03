@@ -1,4 +1,4 @@
-"""Unit tests for `resolve_models` and related toolset helpers."""
+"""Unit tests for playbook toolset helpers (skills / node agents)."""
 
 from pathlib import Path
 
@@ -7,11 +7,7 @@ from pydantic_ai.models import Model as AgentModel
 from pydantic_ai.models.openai import OpenAIChatModel
 
 from harness.playbook._spec import PlaybookNodeSpec
-from harness.playbook._toolset import (
-    _scan_skills,
-    build_node_agents,
-    resolve_models,
-)
+from harness.playbook._toolset import _scan_skills, build_node_agents
 
 _PROVIDERS = [
     {
@@ -28,58 +24,6 @@ def _assert_openai_chat(model: AgentModel | None, model_id: str, base_url: str):
     provider = model.provider
     assert provider is not None
     assert str(provider.base_url) == base_url
-
-
-def test_resolve_models_uses_configured_provider():
-    # The first model in the list is resolved against the configured provider
-    # (base_url from playbook YAML, not an env var).
-    models = resolve_models(
-        [
-            {"name": "openai-chat:ornith:35b", "model_provider": "default"},
-            {"name": "openai-chat:other", "model_provider": "default"},
-        ],
-        _PROVIDERS,
-    )
-    assert len(models) == 2
-    _assert_openai_chat(models[0], "openai:ornith:35b", "http://llm/v1/")
-    _assert_openai_chat(models[1], "openai:other", "http://llm/v1/")
-
-
-def test_resolve_models_missing_provider_infers(monkeypatch: pytest.MonkeyPatch):
-    # An unknown model_provider skips the configured OpenAIProvider and falls
-    # through to infer_model on the bare name (provider credentials from env).
-    monkeypatch.setenv("OPENAI_API_KEY", "sk-infer")
-    models = resolve_models(
-        [{"name": "openai-chat:ornith:35b", "model_provider": "missing"}],
-        _PROVIDERS,
-    )
-    assert len(models) == 1
-    assert isinstance(models[0], OpenAIChatModel)
-    assert models[0].model_id == "openai:ornith:35b"
-
-
-def test_resolve_models_empty_falls_back_to_env(monkeypatch: pytest.MonkeyPatch):
-    # With no `models` list, factory falls back to OPENAI_* env vars.
-    monkeypatch.setenv("OPENAI_MODEL", "ornith:35b")
-    monkeypatch.setenv("OPENAI_BASE_URL", "http://env-llm/v1")
-    monkeypatch.setenv("OPENAI_API_KEY", "sk-env")
-
-    models = resolve_models(None, _PROVIDERS)
-    assert len(models) == 1
-    _assert_openai_chat(models[0], "openai:ornith:35b", "http://env-llm/v1/")
-
-
-def test_resolve_models_empty_without_env(monkeypatch: pytest.MonkeyPatch):
-    monkeypatch.delenv("OPENAI_MODEL", raising=False)
-    assert resolve_models(None, _PROVIDERS) == []
-
-
-def test_resolve_models_node_override():
-    models = resolve_models(
-        [{"name": "openai-chat:node-model", "model_provider": "default"}],
-        _PROVIDERS,
-    )
-    _assert_openai_chat(models[0], "openai:node-model", "http://llm/v1/")
 
 
 def test_scan_skills_finds_skill_in_later_root(tmp_path: Path):
@@ -117,12 +61,7 @@ def test_scan_skills_first_root_wins(tmp_path: Path):
     assert paths == [first / "demo-skill"]
 
 
-def test_build_node_agents_uses_playbook_models_when_node_omits(
-    monkeypatch: pytest.MonkeyPatch,
-):
-    # Without playbook models forwarded, a model-less node would fall through to
-    # OPENAI_* and fail when that env is unset.
-    monkeypatch.delenv("OPENAI_MODEL", raising=False)
+def test_build_node_agents_uses_playbook_models_when_node_omits():
     nodes = [PlaybookNodeSpec(name="node_a", skills=[])]
     playbook_models = [{"name": "openai-chat:ornith:35b", "model_provider": "default"}]
 
@@ -155,3 +94,15 @@ def test_build_node_agents_node_models_override_playbook():
         models=playbook_models,
     )
     _assert_openai_chat(agents[0].model, "openai:node-model", "http://llm/v1/")
+
+
+def test_build_node_agents_raises_without_models():
+    nodes = [PlaybookNodeSpec(name="node_a", skills=[])]
+    with pytest.raises(ValueError, match="No model configured"):
+        build_node_agents(
+            nodes,
+            model_providers=_PROVIDERS,
+            directories=[],
+            model_settings=None,
+            models=None,
+        )

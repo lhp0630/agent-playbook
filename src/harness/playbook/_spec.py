@@ -2,21 +2,10 @@
 
 from __future__ import annotations
 
-from typing import TypedDict
-
 from pydantic import BaseModel, ConfigDict, Field
 from pydantic_ai.settings import ModelSettings
 
-
-class ModelProvider(TypedDict):
-    name: str
-    base_url: str
-    api_key: str
-
-
-class ModelEntry(TypedDict):
-    name: str
-    model_provider: str
+from harness.models import ModelEntry
 
 
 class McpServerSpec(BaseModel):

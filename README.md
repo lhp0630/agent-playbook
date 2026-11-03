@@ -35,10 +35,9 @@ Skill packages live under `.agents/skills/` (`code-review-skill`).
 Copy `.env.example` to `.env` and set credentials:
 
 ```bash
-# Model fallback when playbook `models` is omitted
-OPENAI_MODEL=...
-OPENAI_BASE_URL=...
-OPENAI_API_KEY=...
+# Optional — provider env vars for name-only Model entries (anthropic:/google:/openai-chat: via infer_model)
+# OPENAI_API_KEY=...
+# ANTHROPIC_API_KEY=...
 
 # Optional — enable GitLab MCP for GitLab URLs
 GITLAB_API_URL=https://gitlab.example.com/api/v4
@@ -74,15 +73,16 @@ Import capabilities from `harness` (the `agent` package is the server entrypoint
 ```python
 from pydantic_ai import Agent
 
+from harness.models import Model
 from harness.playbook import Playbook
 
 agent = Agent.from_file(
     '.agents/code-review.yaml',
-    custom_capability_types=[Playbook],
+    custom_capability_types=[Playbook, Model],
 )
 ```
 
-Or construct the capability in code:
+Or construct Playbook with its own `models` / `model_providers`:
 
 ```python
 from pydantic_ai import Agent
@@ -108,7 +108,7 @@ agent = Agent(
 )
 ```
 
-See [`src/harness/playbook/README.md`](src/harness/playbook/README.md) for Playbook details.
+See [`src/harness/playbook/README.md`](src/harness/playbook/README.md) for Playbook details and [`src/harness/models/`](src/harness/models/) for the Model capability.
 
 ### OpenSandbox
 

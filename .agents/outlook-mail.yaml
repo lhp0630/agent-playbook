@@ -2,6 +2,15 @@ name: outlook-mail
 description: Summarize, explain, reply to, and delete Outlook mail
 
 capabilities:
+  - Model:
+      model_providers:
+        - name: custom_openai
+          base_url: https://api.openai.com/v1
+          api_key: sk-z
+      models:
+        - name: openai-chat:gpt-4o-mini
+          model_provider: custom_openai
+
   - Playbook:
       instructions: |
         Write summaries and explanations from the message body in the user's language. Do not send the body to another summarization service.
@@ -25,16 +34,6 @@ capabilities:
               "mail",
             ]
           env_vars: [MS365_MCP_TOKEN_CACHE_PATH, MS365_MCP_SELECTED_ACCOUNT_PATH]
-
-      # model_providers:
-      #   - name: openai
-      #     base_url: https://api.openai.com/v1
-      #     api_key: sk-z
-      model_providers: []
-
-      # models:
-      #   - name: openai-chat:ornith:35b
-      #     model_provider: openai
 
       model_settings:
         temperature: 0.3

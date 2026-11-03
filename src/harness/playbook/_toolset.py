@@ -4,29 +4,21 @@ from __future__ import annotations
 
 import os
 import re
-from collections.abc import Mapping, Sequence
+from collections.abc import Sequence
 from pathlib import Path
 from typing import Any
 
 from fastmcp.client.transports import StdioTransport
 from pydantic_ai import Agent
 from pydantic_ai.mcp import MCPToolset
-from pydantic_ai.models import Model, infer_model
-from pydantic_ai.models.openai import OpenAIChatModel
-from pydantic_ai.providers import infer_provider
-from pydantic_ai.providers.openai import OpenAIProvider
 from pydantic_ai.settings import ModelSettings
 from pydantic_ai.tools import AgentDepsT, RunContext
 from pydantic_ai.toolsets import AbstractToolset, CombinedToolset, FunctionToolset, ToolsetTool
 from pydantic_ai_harness.dynamic_workflow import DynamicWorkflow
 from pydantic_ai_skills import SkillsCapability
 
-from harness.playbook._spec import (
-    McpServerSpec,
-    ModelEntry,
-    ModelProvider,
-    PlaybookNodeSpec,
-)
+from harness.models import ModelEntry, ModelProvider, resolve_models
+from harness.playbook._spec import McpServerSpec, PlaybookNodeSpec
 
 
 def normalize_name(name: str) -> str:
@@ -39,61 +31,6 @@ def normalize_name(name: str) -> str:
         cleaned = f"a_{cleaned}"
 
     return cleaned.lower()
-
-
-def normalize_models(
-    models: ModelEntry | Sequence[ModelEntry] | Mapping[str, str] | None,
-) -> list[ModelEntry] | None:
-    if models is None:
-        return None
-    if isinstance(models, Mapping):
-        return [ModelEntry(name=models["name"], model_provider=models["model_provider"])]
-    return [ModelEntry(name=m["name"], model_provider=m["model_provider"]) for m in models]
-
-
-def resolve_models(
-    models: list[ModelEntry] | None,
-    model_providers: Sequence[ModelProvider],
-) -> list[Model]:
-    """Resolve configured model entries against providers, with OPENAI_* fallback."""
-
-    def make_model(model_entry: ModelEntry) -> Model:
-        model_name = model_entry["name"]
-        model_provider = next(
-            (
-                provider
-                for provider in model_providers
-                if provider["name"] == model_entry["model_provider"]
-            ),
-            None,
-        )
-
-        if not model_provider:
-            return infer_model(model_name)
-
-        def provider_factory(provider: str):
-            if provider in ("openai", "openai-chat", "openai-responses"):
-                return OpenAIProvider(
-                    base_url=model_provider["base_url"], api_key=model_provider["api_key"]
-                )
-
-            return infer_provider(provider)
-
-        return infer_model(model_name, provider_factory)
-
-    config_models = [make_model(model_entry) for model_entry in models] if models else []
-
-    # TODO: Remove OPENAI_* env fallback; callers should pass explicit models.
-    if not config_models:
-        model_name = os.environ.get("OPENAI_MODEL")
-        if model_name:
-            base_url = os.environ.get("OPENAI_BASE_URL", "https://api.openai.com/v1")
-            openai_provider = OpenAIProvider(
-                base_url=base_url, api_key=os.environ.get("OPENAI_API_KEY")
-            )
-            return [OpenAIChatModel(model_name, provider=openai_provider)]
-
-    return config_models
 
 
 def _make_mcp_toolset(mcp_spec: McpServerSpec) -> MCPToolset | None:
@@ -158,7 +95,7 @@ def build_node_agents(
             skill_dirs = _scan_skills(node.skills, directories)
             capabilities.append(SkillsCapability(directories=skill_dirs))
 
-        # Node models win; otherwise playbook models, then OPENAI_* via resolve_models.
+        # Node models win; otherwise playbook (or inherited Model) models.
         node_models = resolve_models(
             node.models if node.models is not None else models, model_providers
         )

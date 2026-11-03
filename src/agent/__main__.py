@@ -55,7 +55,7 @@ def startup_web(host: str = "127.0.0.1", port: int = 8000):
             print(str(exc), file=sys.stderr)
             raise SystemExit(1) from exc
     else:
-        models = supervisor_models()
+        models = supervisor_models(CONFIG_MANAGER.agent_specs)
         if not models:
             print("No model configured for agent.", file=sys.stderr)
             raise SystemExit(1)
