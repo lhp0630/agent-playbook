@@ -1,4 +1,4 @@
-"""Playbook capability: YAML-configured multi-agent workflows for Pydantic AI agents."""
+"""Playbook capability: YAML nodes, skills, and MCP as one agent capability."""
 
 from harness.models import ModelEntry, ModelProvider, resolve_models
 from harness.playbook._capability import Playbook

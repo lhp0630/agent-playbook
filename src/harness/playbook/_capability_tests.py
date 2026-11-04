@@ -91,9 +91,9 @@ mcp_servers:
     assert playbook.mcp_servers is not None
     assert len(playbook.mcp_servers) == 1
     server = playbook.mcp_servers[0]
-    assert server["name"] == "gitlab"
-    assert server["commands"] == ["npx", "mcp-gitlab"]
-    assert server["env_vars"] == ["GITLAB_API_URL"]
+    assert server.name == "gitlab"
+    assert server.commands == ["npx", "mcp-gitlab"]
+    assert server.env_vars == ["GITLAB_API_URL"]
 
 
 def test_node_models_override_parsed():
@@ -108,8 +108,8 @@ nodes:
 """
     )
     node = playbook.nodes[0]
-    assert node["models"] is not None
-    assert node["models"][0]["name"] == "openai-chat:node-model"
+    assert node.models is not None
+    assert node.models[0]["name"] == "openai-chat:node-model"
 
 
 def test_from_spec_empty_nodes_exposes_toolset(tmp_path: Path):
@@ -168,10 +168,10 @@ def test_load_codereview_agent_spec(monkeypatch: pytest.MonkeyPatch) -> None:
     root = agent._root_capability
     assert isinstance(root, CombinedCapability)
     playbook = next(cap for cap in root.capabilities if isinstance(cap, Playbook))
-    assert [node.name for node in playbook._nodes] == ["code_review"]
-    assert playbook._nodes[0].skills == ["code-review-skill"]
-    assert playbook._mcp_servers is not None
-    assert any(server.name == "gitlab" for server in playbook._mcp_servers)
+    assert [node.name for node in playbook.nodes] == ["code_review"]
+    assert playbook.nodes[0].skills == ["code-review-skill"]
+    assert playbook.mcp_servers is not None
+    assert any(server.name == "gitlab" for server in playbook.mcp_servers)
 
 
 def test_load_outlook_mail_agent_spec(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -202,12 +202,12 @@ def test_load_outlook_mail_agent_spec(monkeypatch: pytest.MonkeyPatch) -> None:
     root = agent._root_capability
     assert isinstance(root, CombinedCapability)
     playbook = next(cap for cap in root.capabilities if isinstance(cap, Playbook))
-    assert playbook._nodes == []
+    assert playbook.nodes == []
     assert playbook.instructions is not None
     assert "create-reply-draft" in playbook.instructions
     assert "delete-mail-message" in playbook.instructions
-    assert playbook._mcp_servers is not None
-    server = next(item for item in playbook._mcp_servers if item.name == "outlook")
+    assert playbook.mcp_servers is not None
+    server = next(item for item in playbook.mcp_servers if item.name == "outlook")
     assert server.commands is not None
     assert "@softeria/ms-365-mcp-server" in server.commands
     assert server.commands[-2:] == ["--preset", "mail"]

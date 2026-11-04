@@ -1,4 +1,4 @@
-"""Capability that supplies an OpenSandbox container as an agent run's workspace."""
+"""OpenSandbox capability: isolated container workspace for an agent run."""
 
 from __future__ import annotations
 
@@ -24,17 +24,17 @@ from harness.open_sandbox._backend import (
 
 @dataclass(kw_only=True)
 class OpenSandbox(AbstractCapability[AgentDepsT]):
-    """Supply an isolated OpenSandbox container as the run's workspace.
+    """Supply an OpenSandbox container as the run's workspace, created on first use.
 
-    A run with no reference creates a fresh container on first use. Pass a ``WorkspaceRef``
-    supplied by the application to attach to a sandbox from an earlier run.
+    A run with no reference creates a fresh sandbox. Pass a
+    [`WorkspaceRef`][pydantic_ai.workspaces.WorkspaceRef] supplied by the application to
+    attach to one from an earlier run. The sandbox outlives the run: remove it with
+    [`destroy`][harness.open_sandbox.OpenSandbox.destroy].
 
-    This capability supplies execution only. Compose it with tools or capabilities that
-    use the workspace, such as ``Shell`` or ``FileSystem``. Commands and file operations
-    run inside the container through ``ctx.workspace``.
-
-    Requires the ``opensandbox`` package and a reachable OpenSandbox server configured
-    via ``OPEN_SANDBOX_API_KEY`` / ``OPEN_SANDBOX_DOMAIN``.
+    This capability supplies execution only. Compose it with tools that use the workspace,
+    such as [`Shell`][pydantic_ai_harness.shell.Shell] or
+    [`FileSystem`][pydantic_ai_harness.filesystem.FileSystem]. Requires the `opensandbox`
+    package and a reachable server via `OPEN_SANDBOX_API_KEY` / `OPEN_SANDBOX_DOMAIN`.
 
     ```python
     from pydantic_ai import Agent
@@ -50,27 +50,35 @@ class OpenSandbox(AbstractCapability[AgentDepsT]):
     """
 
     image: str = DEFAULT_IMAGE
-    """OCI image for a newly created sandbox."""
+    """OCI image for a newly created sandbox, such as `'opensandbox/code-interpreter:v1.1.0'`.
+
+    It needs a POSIX `sh` and the usual file utilities.
+    """
 
     sandbox_timeout: int = DEFAULT_SANDBOX_TIMEOUT
-    """Lifetime in seconds of a newly created sandbox before the server shuts it down."""
+    """Seconds a newly created sandbox may go unused before the server shuts it down.
+
+    Every operation renews it as it starts, so a single command must finish within it.
+    """
 
     working_dir: str | None = None
     """Absolute directory commands start in and relative paths resolve against.
 
-    ``None`` uses the container's own directory. Created when this capability creates
-    the sandbox.
+    Created on first use if missing. `None` uses the container's own directory. Applies to
+    attached sandboxes too.
     """
 
     env: Mapping[str, str] | None = field(default=None, repr=False)
-    """Environment variables every command gets. Nothing is read from the host."""
+    """Environment variables every command gets, also on an attached sandbox.
+
+    Nothing is read from the host.
+    """
 
     volumes: Sequence[str] | None = None
-    """Compose short-syntax mounts applied when creating a sandbox.
+    """Compose short-syntax mounts for a new sandbox.
 
-    Each entry is ``name:mount_path`` or ``name:mount_path:ro`` (named PVC). Host
-    binds and remote URIs are rejected. ``None`` (default) mounts nothing. Ignored
-    when attaching by ref.
+    For example `'data:/var/lib/data'` or `'cache:/cache:ro'`. Named PVC only; host binds
+    and remote URIs are rejected. `None` mounts nothing. Ignored when attaching by ref.
     """
 
     def __post_init__(self) -> None:
@@ -91,7 +99,7 @@ class OpenSandbox(AbstractCapability[AgentDepsT]):
         self._new_backend(None)
 
     def backend(self, ref: WorkspaceRef) -> OpenSandboxBackend:
-        """Attach lazily to an existing sandbox."""
+        """Attach lazily to an existing sandbox by ref."""
         if ref.provider != PROVIDER:
             raise ValueError(
                 f"unsupported workspace provider {ref.provider!r}; expected {PROVIDER!r}"
@@ -99,7 +107,7 @@ class OpenSandbox(AbstractCapability[AgentDepsT]):
         return self._new_backend(ref)
 
     async def destroy(self, ref: WorkspaceRef) -> None:
-        """Kill a sandbox by ref. One that is already gone returns quietly."""
+        """Destroy a sandbox by ref. One that is already gone returns quietly."""
         if ref.provider != PROVIDER:
             raise ValueError(
                 f"unsupported workspace provider {ref.provider!r}; expected {PROVIDER!r}"

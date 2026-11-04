@@ -82,49 +82,9 @@ agent = Agent.from_file(
 )
 ```
 
-Or construct Playbook with its own `models` / `model_providers`:
-
-```python
-from pydantic_ai import Agent
-from harness.playbook import Playbook
-
-agent = Agent(
-    'openai:ornith:35b',
-    capabilities=[
-        Playbook(
-            name='code-review',
-            nodes=[],
-            mcp_servers=[],
-            models={'name': 'openai-chat:ornith:35b', 'model_provider': 'openai'},
-            model_providers=[
-                {
-                    'name': 'openai',
-                    'base_url': 'https://api.openai.com/v1',
-                    'api_key': '...',
-                }
-            ],
-        )
-    ],
-)
-```
-
-See [`src/harness/playbook/README.md`](src/harness/playbook/README.md) for Playbook details and [`src/harness/models/`](src/harness/models/) for the Model capability.
-
-### OpenSandbox
-
-```python
-from pydantic_ai import Agent
-from pydantic_ai_harness.filesystem import FileSystem
-from pydantic_ai_harness.shell import Shell
-from harness.open_sandbox import OpenSandbox
-
-agent = Agent(
-    'openai:ornith:35b',
-    capabilities=[OpenSandbox(), Shell(), FileSystem()],
-)
-```
-
-See [`src/harness/open_sandbox/README.md`](src/harness/open_sandbox/README.md) for the workspace, lifetime, and agent-spec YAML.
+- [`Model`](src/harness/models/README.md) — provider menu and model resolution
+- [`Playbook`](src/harness/playbook/README.md) — nodes, skills, MCP via DynamicWorkflow
+- [`OpenSandbox`](src/harness/open_sandbox/README.md) — isolated workspace; compose with Shell / FileSystem
 
 ## Example
 

@@ -1,4 +1,4 @@
-"""Model providers, resolution, and the Model capability."""
+"""Model capability and multi-provider resolution."""
 
 from harness.models._capability import Model
 from harness.models.multi_provider import (

@@ -1,4 +1,4 @@
-"""Playbook toolset: DynamicWorkflow orchestration plus optional MCP servers."""
+"""Playbook toolset wiring: DynamicWorkflow plus optional MCP servers."""
 
 from __future__ import annotations
 
@@ -117,13 +117,7 @@ def build_node_agents(
 
 
 class PlaybookToolset(FunctionToolset[AgentDepsT]):
-    """Exposes DynamicWorkflow `run_workflow` plus playbook MCP toolsets.
-
-    Built as a [`FunctionToolset`][pydantic_ai.toolsets.FunctionToolset] for harness
-    shape consistency; tool dispatch is delegated to an inner
-    [`CombinedToolset`][pydantic_ai.toolsets.CombinedToolset] of
-    `DynamicWorkflow` + MCP.
-    """
+    """Registers DynamicWorkflow `run_workflow` and the playbook's MCP toolsets."""
 
     def __init__(
         self,

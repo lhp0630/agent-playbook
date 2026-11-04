@@ -1,4 +1,4 @@
-"""Harness capabilities for agent-playbook."""
+"""Local capabilities: Model, Playbook, and OpenSandbox."""
 
 from . import models, open_sandbox, playbook
 

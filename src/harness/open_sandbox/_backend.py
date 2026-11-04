@@ -1,9 +1,4 @@
-"""An OpenSandbox container behind Pydantic AI's workspace backend protocols.
-
-File operations go through ``Sandbox.files``. Commands go through ``Sandbox.commands``.
-Building a backend does no I/O; the first operation creates a sandbox or attaches to
-the one a ref names. The backend never kills it.
-"""
+"""OpenSandbox workspace backend: commands and files via the opensandbox SDK."""
 
 from __future__ import annotations
 
@@ -241,27 +236,29 @@ def _translate(
 
 
 class OpenSandboxBackend(WorkspaceBackend, SupportsCommands, SupportsFilesystem, SupportsRealpath):
-    """An OpenSandbox container as a Pydantic AI workspace backend.
+    """Run commands and file operations in an OpenSandbox container, created on first use.
 
-    Commands and file operations run inside the container, not on the host. File
-    operations use the sandbox's ``files`` service. ``realpath`` runs
-    ``os.path.realpath`` in the container so ``FileSystem`` root checks do not
-    depend on the shell filesystem's sized-base64 codec. Building one does no I/O.
-    The first operation creates a sandbox or attaches to ``ref``. The backend does
-    not kill the sandbox; whoever holds the ref does, via ``OpenSandbox.destroy``.
+    File operations use the sandbox `files` service; commands use `commands`. `realpath`
+    runs `os.path.realpath` in the container so `FileSystem` root checks do not depend on
+    the shell filesystem's sized-base64 codec. Building one does no I/O. Built without a
+    ref, the first operation creates a sandbox; built with one, it attaches and raises
+    [`WorkspaceUnavailableError`][pydantic_ai.workspaces.WorkspaceUnavailableError] if it
+    is gone. The backend never destroys the sandbox: call
+    [`OpenSandbox.destroy`][harness.open_sandbox.OpenSandbox.destroy] with its ref.
 
     Args:
-        sandbox: A live ``opensandbox.Sandbox``. Whoever created it owns killing it.
-        ref: Identity of an existing sandbox to attach to on first use.
-        image: OCI image for a newly created sandbox.
-        sandbox_timeout: Lifetime in seconds of a newly created sandbox.
+        sandbox: A live `opensandbox.Sandbox`. Whoever created it owns destroying it.
+        ref: A `WorkspaceRef(provider='opensandbox', id=...)` to attach to on first use.
+        image: OCI image for a newly created sandbox. Ignored when attaching by ref.
+        sandbox_timeout: Seconds a newly created sandbox may go unused before the server
+            shuts it down; every operation renews it.
         working_dir: Absolute directory commands start in and relative paths resolve
-            against. ``None`` uses the container's own directory, discovered with
-            ``pwd -P`` on first use. Created when this backend creates the sandbox.
-        env: Environment variables every command gets. Nothing is read from the host.
-        volumes: Compose short-syntax mounts (``name:mount_path[:ro|rw]``) applied when
-            this backend creates a sandbox. Shape-checked at init; materialized at create.
-            Ignored when attaching by ref.
+            against; created on first use if missing. `None` uses the container's own,
+            discovered with `pwd -P` on first use.
+        env: Environment variables every command gets; nothing is read from the host.
+        volumes: Compose short-syntax mounts (`name:mount_path[:ro|rw]`) when creating a
+            sandbox. Shape-checked at init; materialized at create. Ignored when attaching
+            by ref.
     """
 
     def __init__(

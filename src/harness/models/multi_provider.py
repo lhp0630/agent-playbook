@@ -1,11 +1,4 @@
-"""Resolve model entries against named providers, or via pydantic-ai infer_model.
-
-Entries that name a configured provider build an OpenAI-compatible
-``OpenAIProvider`` for ``openai`` / ``openai-chat`` / ``openai-responses``
-prefixes. Entries that omit ``model_provider``, or name an unknown provider,
-use bare [`infer_model`][pydantic_ai.models.infer_model] (e.g. ``anthropic:…``,
-``google:…``).
-"""
+"""Resolve model entries against named providers, or via pydantic-ai `infer_model`."""
 
 from __future__ import annotations
 

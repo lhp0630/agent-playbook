@@ -82,49 +82,9 @@ agent = Agent.from_file(
 )
 ```
 
-也可在代码中直接构造 Playbook，并自带 `models` / `model_providers`：
-
-```python
-from pydantic_ai import Agent
-from harness.playbook import Playbook
-
-agent = Agent(
-    'openai:ornith:35b',
-    capabilities=[
-        Playbook(
-            name='code-review',
-            nodes=[],
-            mcp_servers=[],
-            models={'name': 'openai-chat:ornith:35b', 'model_provider': 'openai'},
-            model_providers=[
-                {
-                    'name': 'openai',
-                    'base_url': 'https://api.openai.com/v1',
-                    'api_key': '...',
-                }
-            ],
-        )
-    ],
-)
-```
-
-更多说明见 [`src/harness/playbook/README.md`](src/harness/playbook/README.md) 与 [`src/harness/models/`](src/harness/models/)。
-
-### OpenSandbox
-
-```python
-from pydantic_ai import Agent
-from pydantic_ai_harness.filesystem import FileSystem
-from pydantic_ai_harness.shell import Shell
-from harness.open_sandbox import OpenSandbox
-
-agent = Agent(
-    'openai:ornith:35b',
-    capabilities=[OpenSandbox(), Shell(), FileSystem()],
-)
-```
-
-workspace、生命周期与 Agent Spec YAML 见 [`src/harness/open_sandbox/README.md`](src/harness/open_sandbox/README.md)。
+- [`Model`](src/harness/models/README.md) — provider 菜单与模型解析
+- [`Playbook`](src/harness/playbook/README.md) — nodes / skills / MCP（DynamicWorkflow）
+- [`OpenSandbox`](src/harness/open_sandbox/README.md) — 隔离 workspace；与 Shell / FileSystem 组合
 
 ## 示例
 

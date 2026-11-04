@@ -1,9 +1,9 @@
-"""Model capability: shared model_providers + models menu for an agent."""
+"""Model capability: named providers menu and model resolution."""
 
 from __future__ import annotations
 
 from collections.abc import Mapping, Sequence
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any
 
 from pydantic_ai.capabilities import AbstractCapability
@@ -23,7 +23,14 @@ if TYPE_CHECKING:
 
 @dataclass(kw_only=True)
 class Model(AbstractCapability[AgentDepsT]):
-    """Named providers and a models menu the agent (and Playbook) can resolve.
+    """Give the agent a named providers menu and resolve entries for bootstrap and model IDs.
+
+    [`get_model`][pydantic_ai.capabilities.AbstractCapability.get_model] returns the first
+    resolved entry so an agent without an explicit model still bootstraps.
+    [`resolve_model_id`][pydantic_ai.capabilities.AbstractCapability.resolve_model_id]
+    resolves IDs listed in `models`; others return `None` so pydantic-ai falls through to
+    `infer_model`. A sibling [`Playbook`][harness.playbook.Playbook] with an empty local menu
+    inherits this one via [`for_agent`][harness.playbook.Playbook.for_agent].
 
     ```python
     from pydantic_ai import Agent
@@ -38,40 +45,36 @@ class Model(AbstractCapability[AgentDepsT]):
                         'base_url': 'https://llm/v1',
                         'api_key': 'sk-z',
                     },
-                    {
-                        'name': 'aliyun',
-                        'base_url': 'https://llm.aliyun.com/v1',
-                        'api_key': 'sk-z',
-                    },
                 ],
                 models=[
                     {'name': 'openai-chat:ornith:35b', 'model_provider': 'custom_openai'},
-                    {'name': 'openai-chat:deepseek-v4-flash', 'model_provider': 'aliyun'},
                     {'name': 'anthropic:claude-fable-5-1'},
-                    {'name': 'google:gemini-2'},
                 ],
             )
         ],
     )
     ```
-
-    [`get_model`][pydantic_ai.capabilities.AbstractCapability.get_model] returns the
-    first resolved entry so an agent without an explicit model still bootstraps.
-    [`resolve_model_id`][pydantic_ai.capabilities.AbstractCapability.resolve_model_id]
-    resolves IDs that appear in `models` (or any ID through listed providers); other
-    IDs return `None` so pydantic-ai falls through to `infer_model`.
     """
 
     model_providers: Sequence[ModelProvider] = ()
-    """Provider credentials referenced by `models[].model_provider`."""
+    """Provider credentials keyed by `models[].model_provider`.
+
+    For example a custom OpenAI-compatible `base_url`.
+    """
 
     models: ModelEntry | Sequence[ModelEntry] | Mapping[str, str] | None = None
-    """Model menu; a single mapping is allowed."""
+    """Model menu; a single mapping is allowed. `None` or empty contributes no model.
 
-    _normalized_models: list[ModelEntry] | None = field(init=False, repr=False)
+    An entry that omits `model_provider` uses bare [`infer_model`][pydantic_ai.models.infer_model]
+    (for example `anthropic:…` / `google:…`).
+    """
 
-    def __post_init__(self) -> None:
-        object.__setattr__(self, "_normalized_models", normalize_models(self.models))
+    id: str | None = "model"
+    """One-off: an agent has one model menu, so the id is fixed.
+
+    Two `Model` capabilities resolve to one via
+    [`combine`][pydantic_ai.capabilities.AbstractCapability.combine].
+    """
 
     @classmethod
     def from_spec(
@@ -79,31 +82,24 @@ class Model(AbstractCapability[AgentDepsT]):
         *,
         model_providers: Sequence[ModelProvider] = (),
         models: ModelEntry | Sequence[ModelEntry] | Mapping[str, str] | None = None,
-        description: str | None = None,
-        id: str | None = None,
-        defer_loading: bool = False,
-        name: str | None = None,
     ) -> Model[Any]:
-        """Create from YAML/JSON agent-spec fields (or equivalent kwargs)."""
+        """Build from an agent spec, covering the fields a spec can express.
+
+        Every JSON-expressible parameter is named because that signature is what core reads to
+        generate the spec's JSON schema.
+        """
         return cls(
             model_providers=model_providers,
             models=models,
-            description=description,
-            id=id,
-            defer_loading=defer_loading,
         )
-
-    @classmethod
-    def get_serialization_name(cls) -> str | None:
-        return "Model"
 
     @property
     def normalized_models(self) -> list[ModelEntry] | None:
-        return self._normalized_models
+        return normalize_models(self.models)
 
     def resolve(self) -> list[AgentModel]:
         """Resolve the configured menu against `model_providers`."""
-        return resolve_models(self._normalized_models, self.model_providers)
+        return resolve_models(self.normalized_models, self.model_providers)
 
     def get_model(self) -> AgentModel | None:
         resolved = self.resolve()
@@ -116,7 +112,7 @@ class Model(AbstractCapability[AgentDepsT]):
         model_id: KnownModelName | str,
     ) -> AgentModel | None:
         del ctx
-        entries = self._normalized_models or []
+        entries = self.normalized_models or []
         matched = next((entry for entry in entries if entry["name"] == model_id), None)
         if matched is not None:
             return resolve_models([matched], self.model_providers)[0]

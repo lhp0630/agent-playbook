@@ -1,30 +1,28 @@
 # Playbook
 
-> [!NOTE]
-> Import this capability from the `harness` package:
->
-> ```python
-> from harness.playbook import Playbook
-> ```
-
-Turn a YAML-shaped playbook (named nodes, skills, MCP servers, model providers) into a single
-[`Agent`][pydantic_ai.Agent] capability.
+Turn YAML nodes, skills, and MCP servers into one
+[`Agent`][pydantic_ai.Agent] capability: each node becomes a sub-agent, exposed through
+[`DynamicWorkflow`][pydantic_ai_harness.dynamic_workflow.DynamicWorkflow] (`run_workflow`)
+plus any configured MCP tools.
 
 [Source](./)
 
-## The problem
+```python
+from pydantic_ai import Agent
 
-Multi-agent code-review (and similar) workflows need an orchestrator plus specialist sub-agents,
-skills directories, and optional MCP tools. Wiring those by hand for every Agent construction is
-repetitive and drifts from the playbook YAML source of truth.
+from harness.models import Model
+from harness.playbook import Playbook
 
-## The solution
+agent = Agent.from_file(
+    '.agents/code-review.yaml',
+    custom_capability_types=[Playbook, Model],
+)
+```
 
-`Playbook` is an [`AbstractCapability`][pydantic_ai.capabilities.AbstractCapability] that owns the
-playbook config. It builds one sub-agent per node (with [`SkillsCapability`][pydantic_ai_skills.SkillsCapability]
-when skills are listed), exposes them through
-[`DynamicWorkflow`][pydantic_ai_harness.dynamic_workflow.DynamicWorkflow] (`run_workflow`), and
-attaches configured MCP servers -- all via [`PlaybookToolset`](./_toolset.py).
+Or construct it in Python. When `models` / `model_providers` are empty,
+[`for_agent`][harness.playbook.Playbook.for_agent] inherits them from a sibling
+[`Model`][harness.models.Model] capability; a local non-empty menu still wins. Name-only
+entries (no `model_provider`) use pydantic-ai `infer_model`.
 
 ```python
 from pydantic_ai import Agent
@@ -37,10 +35,7 @@ agent = Agent(
             name='code-review',
             nodes=[],
             mcp_servers=[],
-            models={
-                'name': 'openai-chat:ornith:35b',
-                'model_provider': 'openai',
-            },
+            models={'name': 'openai-chat:ornith:35b', 'model_provider': 'openai'},
             model_providers=[
                 {
                     'name': 'openai',
@@ -53,47 +48,6 @@ agent = Agent(
 )
 ```
 
-Load from YAML (agent-spec):
-
-```python
-from pydantic_ai import Agent
-
-from harness.playbook import Playbook
-
-agent = Agent.from_file(
-    '.agents/code-review.yaml',
-    custom_capability_types=[Playbook],
-)
-```
-
-## Tools
-
-| Source | Tool | Purpose |
-|---|---|---|
-| DynamicWorkflow | `run_workflow` | Orchestrate node sub-agents from a sandboxed Python script |
-| MCP servers | *(server tools)* | Tools from each configured `mcp_servers` entry |
-
-## Configuration
-
-```python
-from harness.playbook import Playbook
-
-Playbook(
-    name='code-review',           # unique playbook id
-    nodes=[],                     # PlaybookNodeSpec sequence
-    mcp_servers=[],               # optional MCP server specs
-    models=None,                  # one ModelEntry mapping, or a sequence
-    model_providers=[],           # providers referenced by models
-    instructions=None,            # orchestrator instructions
-    model_settings=None,          # default ModelSettings
-    directories=['.agents/skills'],
-)
-```
-
-When `models` / `model_providers` are omitted, Playbook can inherit them from a sibling [`Model`](../models/) capability. Name-only model entries (no `model_provider`) use pydantic-ai `infer_model`.
-
-## Further reading
-
-- [Pydantic AI capabilities](https://ai.pydantic.dev/capabilities/)
-- [Dynamic Workflow](https://github.com/pydantic/pydantic-ai-harness/tree/main/pydantic_ai_harness/dynamic_workflow/)
-- [Playbook YAML](../../../README.md#playbook-yaml)
+See [`.agents/code-review.yaml`](../../../.agents/code-review.yaml) for an agent-spec
+shape, and [Dynamic Workflow](https://pydantic.dev/docs/ai/harness/dynamic-workflow/)
+for `run_workflow`.
