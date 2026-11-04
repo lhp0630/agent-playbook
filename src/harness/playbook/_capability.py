@@ -9,6 +9,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 from pydantic_ai.capabilities import AbstractCapability
+from pydantic_ai.exceptions import UserError
 from pydantic_ai.models import Model as AgentModel
 from pydantic_ai.settings import ModelSettings
 from pydantic_ai.tools import AgentDepsT
@@ -94,13 +95,14 @@ class Playbook(AbstractCapability[AgentDepsT]):
     models: ModelEntry | Sequence[ModelEntry] | Mapping[str, str] | None = None
     """Orchestrator (and default node) model menu; a single mapping is allowed.
 
-    `None` or empty defers to a sibling [`Model`][harness.models.Model] after `for_agent`.
+    Required when `model_providers` is set. When providers are empty, `for_agent` takes
+    the sibling [`Model`][harness.models.Model] menu as a pair.
     """
 
     model_providers: Sequence[ModelProvider] = ()
     """Provider credentials keyed by `models[].model_provider`.
 
-    Empty defers to a sibling `Model`.
+    Requires a non-empty `models` menu. Empty defers to a sibling `Model`.
     """
 
     instructions: str | None = None
@@ -131,6 +133,13 @@ class Playbook(AbstractCapability[AgentDepsT]):
     def __post_init__(self) -> None:
         self.nodes = check_nodes(self.nodes)
         self.mcp_servers = check_mcp_servers(self.mcp_servers)
+        # Providers without a menu cannot resolve; reject at construction rather than
+        # inheriting models later while keeping local providers.
+        if self.model_providers and not normalize_models(self.models):
+            raise UserError(
+                "`Playbook.model_providers` requires a non-empty `models` menu; "
+                "omit providers to inherit both from a sibling `Model`, or set both."
+            )
         self._effective_models = normalize_models(self.models)
         self._effective_model_providers = self.model_providers
 
@@ -164,20 +173,20 @@ class Playbook(AbstractCapability[AgentDepsT]):
         )
 
     def for_agent(self, agent: AbstractAgent[AgentDepsT, Any]) -> Playbook[AgentDepsT]:
-        """Inherit empty models/providers from a sibling Model capability."""
+        """Inherit models/providers from a sibling Model when local providers are empty.
+
+        `__post_init__` rejects providers without models, so a local `model_providers`
+        menu is complete and the sibling walk is skipped. Otherwise take the sibling's
+        `models` and `model_providers` as a pair.
+        """
+        if self.model_providers:
+            return self
         sibling = _find_model_capability(agent)
         if sibling is None:
             return self
-        providers: Sequence[ModelProvider] = (
-            self.model_providers if self.model_providers else sibling.model_providers
-        )
-        local_models = normalize_models(self.models)
-        models = local_models if local_models else sibling.normalized_models
-        if providers is self._effective_model_providers and models is self._effective_models:
-            return self
         bound = copy(self)
-        bound._effective_model_providers = providers
-        bound._effective_models = models
+        bound._effective_model_providers = sibling.model_providers
+        bound._effective_models = sibling.normalized_models
         return bound
 
     def resolve_models(self) -> list[AgentModel]:

@@ -8,17 +8,22 @@ from yaml import safe_load
 
 from harness.playbook import Playbook
 
-# Shared provider + minimal playbook skeleton: every test configures one local
-# `default` provider, so it lives here once and the tests only supply extras.
+# Minimal playbook skeleton. Specs that set `model_providers` must also set `models`.
 _BASE = """
 name: test-playbook
+nodes:
+  - name: node_a
+    skills: []
+"""
+
+_LOCAL_MODELS = """
 model_providers:
   - name: default
     base_url: http://llm/v1
     api_key: sk-config
-nodes:
-  - name: node_a
-    skills: []
+models:
+  - name: openai-chat:ornith:35b
+    model_provider: default
 """
 
 
@@ -40,9 +45,7 @@ def test_from_spec_raises_when_yaml_missing(tmp_path: Path):
 
 def test_from_spec_loads_models(tmp_path: Path):
     path = tmp_path / "playbook.yml"
-    path.write_text(
-        _BASE + "models:\n" + "  - name: openai-chat:ornith:35b\n" + "    model_provider: default\n"
-    )
+    path.write_text(_BASE + _LOCAL_MODELS)
     playbook = _load_playbook(path)
     assert playbook.models is not None
     assert playbook.models[0]["name"] == "openai-chat:ornith:35b"
@@ -134,13 +137,7 @@ def test_get_instructions_strips_and_omits_blank():
 
 
 def test_resolve_models_delegates_to_providers():
-    playbook = _make_playbook(
-        """
-models:
-  - name: openai-chat:ornith:35b
-    model_provider: default
-"""
-    )
+    playbook = _make_playbook(_LOCAL_MODELS)
     models = playbook.resolve_models()
     assert len(models) == 1
     assert models[0].model_id == "openai:ornith:35b"
@@ -233,3 +230,30 @@ def test_playbook_for_agent_inherits_sibling_model() -> None:
     resolved = bound.resolve_models()
     assert len(resolved) == 1
     assert resolved[0].model_id == "openai:ornith:35b"
+
+
+def test_for_agent_skips_sibling_when_local_providers_set() -> None:
+    playbook = Playbook(
+        name="x",
+        nodes=[],
+        model_providers=[{"name": "default", "base_url": "http://llm/v1", "api_key": "sk-config"}],
+        models=[{"name": "openai-chat:ornith:35b", "model_provider": "default"}],
+    )
+
+    class _BoomAgent:
+        @property
+        def _root_capability(self):
+            raise AssertionError("_find_model_capability should not run")
+
+    assert playbook.for_agent(_BoomAgent()) is playbook  # type: ignore[arg-type]
+
+
+def test_post_init_rejects_providers_without_models() -> None:
+    from pydantic_ai.exceptions import UserError
+
+    with pytest.raises(UserError, match="model_providers"):
+        Playbook(
+            name="x",
+            nodes=[],
+            model_providers=[{"name": "default", "base_url": "http://llm/v1", "api_key": "sk"}],
+        )
