@@ -1,5 +1,5 @@
-"""Local capabilities: Model, Playbook, and OpenSandbox."""
+"""Local capabilities: Model and Playbook."""
 
-from . import models, open_sandbox, playbook
+from . import models, playbook
 
-__all__ = ["models", "open_sandbox", "playbook"]
+__all__ = ["models", "playbook"]

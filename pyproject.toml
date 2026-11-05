@@ -5,8 +5,8 @@ description = "YAML-configured multi-agent workflows powered by pydantic-ai Dyna
 requires-python = ">=3.11"
 dependencies = [
     "pydantic>=2.0",
-    "pydantic-ai-slim[mcp,openai,web,web-fetch]>=2.65.0",
-    "pydantic-ai-harness>=0.65.0",
+    "pydantic-ai-slim[mcp,openai,web,web-fetch]>=2.66.0",
+    "pydantic-ai-harness>=0.66.0",
     "pydantic-ai-skills>=1.4.0",
 ]
 
@@ -17,7 +17,6 @@ agent = [
     "watchfiles>=1.2.0",
     "python-dotenv>=1.0",
     "pyyaml>=6.0",
-    "opensandbox>=0.1.15",
 ]
 
 [dependency-groups]

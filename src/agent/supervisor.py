@@ -27,14 +27,12 @@ from pydantic_graph import End
 
 from harness.models import Model as ModelCapability
 from harness.models import normalize_models, resolve_models
-from harness.open_sandbox import OpenSandbox
 from harness.playbook import Playbook
 from harness.playbook._toolset import normalize_name
 
 CUSTOM_CAPABILITY_TYPES: list[type[AbstractCapability[Any]]] = [
     Playbook,
     ModelCapability,
-    OpenSandbox,
 ]
 
 SUPERVISOR_INSTRUCTIONS = """

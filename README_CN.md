@@ -9,7 +9,6 @@
 - 加载多个 Playbook Spec 时，经 supervisor 智能体进入
 - 支持配置 Workflow，编排多节点智能体
 - 支持配置 MCP 工具
-- 沙箱环境，可运行不受信任的代码或命令行
 
 ## 安装
 
@@ -20,7 +19,7 @@ git clone --recurse-submodules https://github.com/lhp0630/agent-playbook.git && 
 uv sync --all-groups --extra agent
 ```
 
-`--extra agent` 会安装服务端依赖（`fire`、`uvicorn`、`pyyaml`、`opensandbox` 等）。可复用库在 `src/harness/` 的 `harness` 包；CLI/Web 应用在 `src/agent/` 的 `agent` 包。
+`--extra agent` 会安装服务端依赖（`fire`、`uvicorn`、`pyyaml` 等）。可复用库在 `src/harness/` 的 `harness` 包；CLI/Web 应用在 `src/agent/` 的 `agent` 包。
 
 若已克隆但未拉取子模块：
 
@@ -46,10 +45,6 @@ GITLAB_PERSONAL_ACCESS_TOKEN=glpat-xxx
 # 可选 — outlook-mail 的 Outlook MCP（绝对路径；一次性执行 `npx -y @softeria/ms-365-mcp-server --login`）
 MS365_MCP_TOKEN_CACHE_PATH=/absolute/path/.config/ms365-mcp/.token-cache.json
 MS365_MCP_SELECTED_ACCOUNT_PATH=/absolute/path/.config/ms365-mcp/.selected-account.json
-
-# 可选 — OpenSandbox 服务，用于 harness.open_sandbox.OpenSandbox
-OPEN_SANDBOX_API_KEY=...
-OPEN_SANDBOX_DOMAIN=localhost:8080
 ```
 
 运行 Playbook：
@@ -84,7 +79,6 @@ agent = Agent.from_file(
 
 - [`Model`](src/harness/models/README.md) — provider 菜单与模型解析
 - [`Playbook`](src/harness/playbook/README.md) — nodes / skills / MCP（DynamicWorkflow）
-- [`OpenSandbox`](src/harness/open_sandbox/README.md) — 隔离 workspace；与 Shell / FileSystem 组合
 
 ## 示例
 
