@@ -7,12 +7,12 @@
 ## 功能
 
 - 加载多个 Playbook Spec 时，经 supervisor 智能体进入
-- 支持配置 Workflow，编排多节点智能体
-- 支持配置 MCP 工具
+- 每个 Playbook Spec 顶层配置 MCP 与多 provider 模型菜单
+- Skills 等能力走标准 `capabilities` 列表
 
 ## 安装
 
-Python 3.11+，依赖管理使用 [uv](https://docs.astral.sh/uv/)（已包含 `pydantic-ai-harness` 与 `pydantic-ai-skills`）：
+Python 3.11+，依赖管理使用 [uv](https://docs.astral.sh/uv/)（已包含 `pydantic-ai-skills`）：
 
 ```bash
 git clone --recurse-submodules https://github.com/lhp0630/agent-playbook.git && cd agent-playbook
@@ -63,22 +63,17 @@ agent
 
 ## 编程接入
 
-从 `harness` 导入 Capability（`agent` 包仅作为服务入口）：
-
 ```python
-from pydantic_ai import Agent
+from agent import PlaybookSpec
+from agent.supervisor import CUSTOM_CAPABILITY_TYPES
 
-from harness.models import Model
-from harness.playbook import Playbook
-
-agent = Agent.from_file(
-    '.agents/code-review.yaml',
-    custom_capability_types=[Playbook, Model],
-)
+spec = PlaybookSpec.from_file('.agents/code-review.yaml')
+agent = spec.to_agent(custom_capability_types=CUSTOM_CAPABILITY_TYPES)
 ```
 
-- [`Model`](src/harness/models/README.md) — provider 菜单与模型解析
-- [`Playbook`](src/harness/playbook/README.md) — nodes / skills / MCP（DynamicWorkflow）
+- [`PlaybookSpec`](src/agent/playbook_spec.py) — AgentSpec + `mcp_servers` / `models` / `model_providers`
+- [`Model`](src/harness/models/README.md) — 可选 Model capability 与多 provider 解析
+- [`harness.mcp`](src/harness/mcp/README.md) — 对齐 Claude 的 MCP toolset 构建
 
 ## 示例
 

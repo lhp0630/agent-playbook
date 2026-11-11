@@ -1,48 +1,35 @@
 name: code-review
 description: Review a GitHub/GitLab commit or PR/MR via code review
 
+instructions: |
+  Fetch the user-provided commit/MR/PR URL before reviewing:
+  - GitHub URLs: use WebFetch only.
+  - GitLab URLs or self-hosted GitLab: use gitlab MCP tools only; do not use WebFetch for GitLab.
+  Load and apply the code-review-skill. Produce a concrete review of the fetched diff/PR.
+
+  Before any GitLab MCP call, resolve required params:
+  - Parse from the user-provided GitLab URL.
+  - Else use an explicit project/path from the user message.
+  - If still missing: ask the user to provide the project path or numeric project_id; do not call the tool.
+
+mcp_servers:
+  - name: gitlab
+    command: npx
+    args:
+      [
+        "-y",
+        "--registry=https://registry.npmmirror.com",
+        "@zereight/mcp-gitlab",
+      ]
+    env:
+      GITLAB_API_URL: "${GITLAB_API_URL}"
+      GITLAB_PERSONAL_ACCESS_TOKEN: "${GITLAB_PERSONAL_ACCESS_TOKEN}"
+
+model_settings:
+  temperature: 0.3
+
 capabilities:
-  - Model:
-      # Custom OpenAI-compatible endpoints; omit model_provider on an entry to use
-      # pydantic-ai infer_model (anthropic:/google:/openai-chat: with provider env vars).
-      model_providers:
-        - name: custom_openai
-          base_url: https://api.openai.com/v1
-          api_key: sk-z
-      models:
-        - name: openai-chat:gpt-4o-mini
-          model_provider: custom_openai
-        # - name: anthropic:claude-fable-5-1
-        # - name: google:gemini-2
-
-  - WebFetch: {local: true}
-  - Playbook:
-      instructions: |
-        Fetch the user-provided commit/MR/PR URL before running nodes:
-        - GitHub URLs: use WebFetch only.
-        - GitLab URLs or self-hosted GitLab: use gitlab MCP tools only; do not use WebFetch for GitLab.
-        Pass fetched content and prior node outputs into later tasks so each dependent sub-agent call keeps the relevant context.
-
-        Before any GitLab MCP call, resolve required params:
-        - Parse from the user-provided GitLab URL.
-        - Else use an explicit project/path from the user message.
-        - If still missing: ask the user to provide the project path or numeric project_id; do not call the tool.
-
-      nodes:
-        - name: code_review
-          instructions: Load and apply the code-review-skill. Produce a concrete review of the fetched diff/PR.
-          skills: ["code-review-skill"]
-
-      mcp_servers:
-        - name: gitlab
-          commands:
-            [
-              "npx",
-              "-y",
-              "--registry=https://registry.npmmirror.com",
-              "@zereight/mcp-gitlab",
-            ]
-          env_vars: [GITLAB_API_URL, GITLAB_PERSONAL_ACCESS_TOKEN]
-
-      model_settings:
-        temperature: 0.3
+  - WebFetch: { local: true }
+  - SkillsCapability:
+      directories: [.agents/skills]
+      include: [code-review-skill]

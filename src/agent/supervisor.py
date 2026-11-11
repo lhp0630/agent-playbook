@@ -16,22 +16,22 @@ from typing import Any
 from pydantic_ai import Agent
 from pydantic_ai._agent_graph import CallToolsNode, ModelRequestNode
 from pydantic_ai._utils import fill_run_metadata
-from pydantic_ai.agent.spec import AgentSpec
 from pydantic_ai.capabilities import AbstractCapability
 from pydantic_ai.messages import ModelMessage
 from pydantic_ai.models import Model
 from pydantic_ai.result import FinalResult
 from pydantic_ai.tools import RunContext
 from pydantic_ai.toolsets import AbstractToolset, FunctionToolset
+from pydantic_ai_skills import SkillsCapability
 from pydantic_graph import End
 
+from agent.names import normalize_name
+from agent.playbook_spec import PlaybookSpec
 from harness.models import Model as ModelCapability
 from harness.models import normalize_models, resolve_models
-from harness.playbook import Playbook
-from harness.playbook._toolset import normalize_name
 
 CUSTOM_CAPABILITY_TYPES: list[type[AbstractCapability[Any]]] = [
-    Playbook,
+    SkillsCapability,
     ModelCapability,
 ]
 
@@ -70,7 +70,7 @@ class WebEntry:
     route: AgentRoute | None
 
 
-def build_agent_catalog(specs: Sequence[tuple[Path, AgentSpec]]) -> list[AgentRoute]:
+def build_agent_catalog(specs: Sequence[tuple[Path, PlaybookSpec]]) -> list[AgentRoute]:
     """Build the supervisor catalog from loaded specs.
 
     Specs without a name or description are omitted: the model selects a tool by
@@ -97,7 +97,7 @@ def build_agent_catalog(specs: Sequence[tuple[Path, AgentSpec]]) -> list[AgentRo
     return routes
 
 
-def prepare_web_entry(specs: Sequence[tuple[Path, AgentSpec]]) -> WebEntry:
+def prepare_web_entry(specs: Sequence[tuple[Path, PlaybookSpec]]) -> WebEntry:
     """Choose the web entry for the loaded specs.
 
     An empty catalog means there is nothing to serve.
@@ -110,19 +110,21 @@ def prepare_web_entry(specs: Sequence[tuple[Path, AgentSpec]]) -> WebEntry:
     return WebEntry(route=None)
 
 
-def resolve_models_for_spec(spec: AgentSpec) -> list[Model[Any]]:
-    """Resolve models from a Model capability, else Playbook-local models."""
-    for preferred in ("Model", "Playbook"):
-        for cap in spec.capabilities:
-            if cap.name != preferred:
-                continue
-            kwargs = cap.kwargs
-            models = resolve_models(
-                normalize_models(kwargs.get("models")),
-                kwargs.get("model_providers") or [],
-            )
-            if models:
-                return models
+def resolve_models_for_spec(spec: PlaybookSpec) -> list[Model[Any]]:
+    """Resolve models from PlaybookSpec fields, else a Model capability."""
+    models = spec.resolve_models()
+    if models:
+        return models
+    for cap in spec.capabilities:
+        if cap.name != "Model":
+            continue
+        arguments = cap.arguments if isinstance(cap.arguments, dict) else {}
+        models = resolve_models(
+            normalize_models(arguments.get("models")),
+            arguments.get("model_providers") or [],
+        )
+        if models:
+            return models
     return []
 
 
@@ -131,16 +133,14 @@ def load_spec_agent(
     *,
     custom_capability_types: Sequence[type[AbstractCapability[Any]]] = (),
 ) -> tuple[Agent[Any, Any], list[Model[Any]]]:
-    """Build the specialist agent for one spec file."""
-    spec = AgentSpec.from_file(path)
+    """Build the specialist agent for one playbook spec file."""
+    spec = PlaybookSpec.from_file(path)
     models = resolve_models_for_spec(spec)
     if not models and not spec.model:
         raise RuntimeError(f"No model configured for agent {spec.name!r}.")
-    agent = Agent.from_file(
-        path,
-        custom_capability_types=list(custom_capability_types),
+    agent = spec.to_agent(
+        custom_capability_types=custom_capability_types,
         model=models[0] if models else None,
-        name=normalize_name(spec.name) if spec.name else None,
     )
     return agent, models
 
@@ -267,7 +267,7 @@ class SupervisorToolset(FunctionToolset[Any]):
 class Supervisor(AbstractCapability[Any]):
     """Handoff tools for the loaded agent specs, plus each specialist's history."""
 
-    specs: Callable[[], Sequence[tuple[Path, AgentSpec]]]
+    specs: Callable[[], Sequence[tuple[Path, PlaybookSpec]]]
     custom_capability_types: Sequence[type[AbstractCapability[Any]]] = ()
     loader: Callable[[AgentRoute], Agent[Any, Any]] | None = None
     histories: SpecialistHistories = field(default_factory=SpecialistHistories)
@@ -332,7 +332,7 @@ class Supervisor(AbstractCapability[Any]):
 
 
 def supervisor_models(
-    specs: Sequence[tuple[Path, AgentSpec]] | None = None,
+    specs: Sequence[tuple[Path, PlaybookSpec]] | None = None,
 ) -> list[Model[Any]]:
     """Models for the supervisor agent, taken from the first configured spec.
 

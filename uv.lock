@@ -16,7 +16,6 @@ version = "0.1.1"
 source = { editable = "." }
 dependencies = [
     { name = "pydantic" },
-    { name = "pydantic-ai-harness" },
     { name = "pydantic-ai-skills" },
     { name = "pydantic-ai-slim", extra = ["mcp", "openai", "web", "web-fetch"] },
 ]
@@ -41,7 +40,6 @@ dev = [
 requires-dist = [
     { name = "fire", marker = "extra == 'agent'", specifier = ">=0.7" },
     { name = "pydantic", specifier = ">=2.0" },
-    { name = "pydantic-ai-harness", specifier = ">=0.66.0" },
     { name = "pydantic-ai-skills", specifier = ">=1.4.0" },
     { name = "pydantic-ai-slim", extras = ["mcp", "openai", "web", "web-fetch"], specifier = ">=2.66.0" },
     { name = "python-dotenv", marker = "extra == 'agent'", specifier = ">=1.0" },
@@ -1073,20 +1071,6 @@ wheels = [
 [package.optional-dependencies]
 email = [
     { name = "email-validator" },
-]
-
-[[package]]
-name = "pydantic-ai-harness"
-version = "0.66.0"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "genai-prices" },
-    { name = "httpx" },
-    { name = "pydantic-ai-slim" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/c8/28/96e1ac69852614c1c993ca352000f0f8e381bbc9656802a16864a5c2d897/pydantic_ai_harness-0.66.0.tar.gz", hash = "sha256:d646caf7cf0f83ced707d88dbc387bd73f3ff78cd6e34722665cf527dcfe6674", size = 1504421, upload-time = "2026-11-04T10:28:55.84Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/50/1b/d3a4e0941226a88f54e17fbb80b7190b752154329d6681a465ae101b4706/pydantic_ai_harness-0.66.0-py3-none-any.whl", hash = "sha256:d98e2e8c57dd34560ad0a83c5611d9b57c30c7572f2bde276d3b99c4d99ab025", size = 1838626, upload-time = "2026-11-04T10:28:42.148Z" },
 ]
 
 [[package]]

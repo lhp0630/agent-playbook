@@ -4,7 +4,6 @@ from pathlib import Path
 
 import pytest
 from pydantic_ai import Agent
-from pydantic_ai.agent.spec import AgentSpec
 from pydantic_ai.messages import (
     ModelMessage,
     ModelRequest,
@@ -18,6 +17,7 @@ from pydantic_ai.models.function import AgentInfo, FunctionModel
 from pydantic_ai.models.test import TestModel
 from pydantic_ai.toolsets import FunctionToolset
 
+from agent.playbook_spec import PlaybookSpec
 from agent.supervisor import (
     AgentRoute,
     Supervisor,
@@ -26,13 +26,13 @@ from agent.supervisor import (
 )
 
 
-def _spec(name: str | None, description: str | None, path: Path) -> tuple[Path, AgentSpec]:
+def _spec(name: str | None, description: str | None, path: Path) -> tuple[Path, PlaybookSpec]:
     data: dict[str, str] = {}
     if name is not None:
         data["name"] = name
     if description is not None:
         data["description"] = description
-    return path, AgentSpec.from_dict(data)
+    return path, PlaybookSpec.from_dict(data)
 
 
 def test_catalog_keeps_name_and_description(tmp_path: Path) -> None:

@@ -21,13 +21,10 @@ class ModelEntry(TypedDict):
     model_provider: NotRequired[str]
 
 
-def normalize_models(
-    models: ModelEntry | Sequence[ModelEntry] | Mapping[str, str] | None,
-) -> list[ModelEntry] | None:
+def normalize_models(models: Sequence[ModelEntry] | None) -> list[ModelEntry] | None:
+    """Copy entries and drop blank `model_provider`; `None` stays `None`."""
     if models is None:
         return None
-    if isinstance(models, Mapping):
-        return [_normalize_entry(models)]
     return [_normalize_entry(entry) for entry in models]
 
 
@@ -40,17 +37,18 @@ def _normalize_entry(entry: Mapping[str, str]) -> ModelEntry:
 
 
 def resolve_models(
-    models: list[ModelEntry] | None,
-    model_providers: Sequence[ModelProvider],
+    models: Sequence[ModelEntry] | None,
+    model_providers: Sequence[ModelProvider] | None,
 ) -> list[Model]:
     """Resolve configured model entries against providers.
 
     Returns an empty list when ``models`` is ``None`` or empty. There is no
-    environment-variable fallback.
+    environment-variable fallback. ``model_providers`` of ``None`` means none.
     """
     if not models:
         return []
-    return [_make_model(entry, model_providers) for entry in models]
+    providers = model_providers or ()
+    return [_make_model(entry, providers) for entry in models]
 
 
 def _make_model(model_entry: ModelEntry, model_providers: Sequence[ModelProvider]) -> Model:

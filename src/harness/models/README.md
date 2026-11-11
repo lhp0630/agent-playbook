@@ -30,5 +30,4 @@ agent = Agent(
 
 [`get_model`][pydantic_ai.capabilities.AbstractCapability.get_model] returns the first
 resolved entry so an agent without an explicit model still bootstraps. Entries that
-omit `model_provider` use bare `infer_model`. A sibling
-[`Playbook`][harness.playbook.Playbook] with an empty local menu inherits this one.
+omit `model_provider` use bare `infer_model`.

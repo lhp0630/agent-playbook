@@ -1,5 +1,5 @@
-"""Local capabilities: Model and Playbook."""
+"""Local helpers: Model capability and MCP toolset builders."""
 
-from . import models, playbook
+from . import mcp, models
 
-__all__ = ["models", "playbook"]
+__all__ = ["mcp", "models"]

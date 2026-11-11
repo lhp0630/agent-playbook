@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from collections.abc import Mapping, Sequence
+from collections.abc import Sequence
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any
 
@@ -29,8 +29,7 @@ class Model(AbstractCapability[AgentDepsT]):
     resolved entry so an agent without an explicit model still bootstraps.
     [`resolve_model_id`][pydantic_ai.capabilities.AbstractCapability.resolve_model_id]
     resolves IDs listed in `models`; others return `None` so pydantic-ai falls through to
-    `infer_model`. A sibling [`Playbook`][harness.playbook.Playbook] with an empty local menu
-    inherits this one via [`for_agent`][harness.playbook.Playbook.for_agent].
+    `infer_model`.
 
     ```python
     from pydantic_ai import Agent
@@ -56,14 +55,14 @@ class Model(AbstractCapability[AgentDepsT]):
     ```
     """
 
-    model_providers: Sequence[ModelProvider] = ()
+    model_providers: Sequence[ModelProvider] | None = None
     """Provider credentials keyed by `models[].model_provider`.
 
-    For example a custom OpenAI-compatible `base_url`.
+    For example a custom OpenAI-compatible `base_url`. `None` or empty means none.
     """
 
-    models: ModelEntry | Sequence[ModelEntry] | Mapping[str, str] | None = None
-    """Model menu; a single mapping is allowed. `None` or empty contributes no model.
+    models: Sequence[ModelEntry] | None = None
+    """Model menu. `None` or empty contributes no model.
 
     An entry that omits `model_provider` uses bare [`infer_model`][pydantic_ai.models.infer_model]
     (for example `anthropic:…` / `google:…`).
@@ -80,8 +79,8 @@ class Model(AbstractCapability[AgentDepsT]):
     def from_spec(
         cls,
         *,
-        model_providers: Sequence[ModelProvider] = (),
-        models: ModelEntry | Sequence[ModelEntry] | Mapping[str, str] | None = None,
+        model_providers: Sequence[ModelProvider] | None = None,
+        models: Sequence[ModelEntry] | None = None,
     ) -> Model[Any]:
         """Build from an agent spec, covering the fields a spec can express.
 

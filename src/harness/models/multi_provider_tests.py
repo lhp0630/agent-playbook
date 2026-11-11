@@ -75,12 +75,13 @@ def test_resolve_models_omitted_provider_uses_infer_model(monkeypatch: pytest.Mo
 
 
 def test_normalize_models_keeps_optional_provider():
-    assert normalize_models({"name": "anthropic:claude-fable-5-1"}) == [
+    assert normalize_models([{"name": "anthropic:claude-fable-5-1"}]) == [
         {"name": "anthropic:claude-fable-5-1"}
     ]
     assert normalize_models([{"name": "openai-chat:ornith:35b", "model_provider": "default"}]) == [
         {"name": "openai-chat:ornith:35b", "model_provider": "default"}
     ]
+    assert normalize_models(None) is None
 
 
 def test_resolve_models_node_override():

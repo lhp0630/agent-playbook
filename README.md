@@ -7,12 +7,12 @@ Agents driven by YAML Agent Specs.
 ## Features
 
 - With multiple Playbook Specs loaded, entry goes through a supervisor agent
-- Configurable Workflow orchestration across multi-node agents
-- Configurable MCP tools
+- Top-level MCP servers and multi-provider models on each Playbook Spec
+- Skills and other capabilities via the standard agent `capabilities` list
 
 ## Installation
 
-Python 3.11+. Uses [uv](https://docs.astral.sh/uv/) for dependencies (includes `pydantic-ai-harness` and `pydantic-ai-skills`):
+Python 3.11+. Uses [uv](https://docs.astral.sh/uv/) for dependencies (includes `pydantic-ai-skills`):
 
 ```bash
 git clone --recurse-submodules https://github.com/lhp0630/agent-playbook.git && cd agent-playbook
@@ -63,22 +63,17 @@ With a single spec loaded, the web chat talks to that agent directly.
 
 ## Programmatic usage
 
-Import capabilities from `harness` (the `agent` package is the server entrypoint only):
-
 ```python
-from pydantic_ai import Agent
+from agent import PlaybookSpec
+from agent.supervisor import CUSTOM_CAPABILITY_TYPES
 
-from harness.models import Model
-from harness.playbook import Playbook
-
-agent = Agent.from_file(
-    '.agents/code-review.yaml',
-    custom_capability_types=[Playbook, Model],
-)
+spec = PlaybookSpec.from_file('.agents/code-review.yaml')
+agent = spec.to_agent(custom_capability_types=CUSTOM_CAPABILITY_TYPES)
 ```
 
-- [`Model`](src/harness/models/README.md) — provider menu and model resolution
-- [`Playbook`](src/harness/playbook/README.md) — nodes, skills, MCP via DynamicWorkflow
+- [`PlaybookSpec`](src/agent/playbook_spec.py) — AgentSpec plus `mcp_servers` / `models` / `model_providers`
+- [`Model`](src/harness/models/README.md) — optional Model capability and multi-provider helpers
+- [`harness.mcp`](src/harness/mcp/README.md) — Claude-compatible MCP toolset builders
 
 ## Example
 

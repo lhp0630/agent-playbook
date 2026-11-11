@@ -1,12 +1,11 @@
 [project]
 name = "agent-playbook"
 version = "0.1.1"
-description = "YAML-configured multi-agent workflows powered by pydantic-ai DynamicWorkflow."
+description = "YAML-configured agents with MCP, skills, and a web supervisor."
 requires-python = ">=3.11"
 dependencies = [
     "pydantic>=2.0",
     "pydantic-ai-slim[mcp,openai,web,web-fetch]>=2.66.0",
-    "pydantic-ai-harness>=0.66.0",
     "pydantic-ai-skills>=1.4.0",
 ]
 
