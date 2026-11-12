@@ -2,13 +2,26 @@
 
 [中文](README_CN.md) | [English](README.md)
 
-Agents driven by YAML Agent Specs.
+YAML **PlaybookSpec** agents (extends pydantic-ai [`AgentSpec`](https://ai.pydantic.dev/)) with MCP, skills, and a web **Supervisor**.
+
+## Architecture
+
+| Layer | Role |
+| --- | --- |
+| `.agents/*.yaml` | One [`PlaybookSpec`](src/agent/playbook_spec.py) per file: AgentSpec fields plus top-level `mcp_servers` / `models` / `model_providers` |
+| `capabilities` | Standard pydantic-ai capabilities (`WebFetch`, [`SkillsCapability`](https://github.com/pydantic/pydantic-ai-skills), optional [`Model`](src/harness/models/README.md), …) |
+| [`harness.mcp`](src/harness/mcp/README.md) | Claude-shaped MCP entries → prefixed toolsets; skips a server when its required `${VAR}`s are unset |
+| [`harness.models`](src/harness/models/README.md) | Multi-provider resolve helpers and optional Model capability |
+| [`Supervisor`](src/agent/supervisor.py) | When several specs are loaded, the only web entry: handoff tools + per-agent conversation history |
+
+There is no Playbook capability and no DynamicWorkflow `nodes` menu — specialists are plain agents built with `PlaybookSpec.to_agent()`.
 
 ## Features
 
-- With multiple Playbook Specs loaded, entry goes through a supervisor agent
-- Top-level MCP servers and multi-provider models on each Playbook Spec
-- Skills and other capabilities via the standard agent `capabilities` list
+- Multi-spec web entry via Supervisor; single-spec talks to that agent directly
+- Top-level MCP and optional model menu on each PlaybookSpec
+- Skills and other tools via the agent `capabilities` list
+- Name-only model entries use pydantic-ai `infer_model` (e.g. `OPENAI_API_KEY`); custom endpoints use `model_providers`
 
 ## Installation
 
@@ -19,7 +32,7 @@ git clone --recurse-submodules https://github.com/lhp0630/agent-playbook.git && 
 uv sync --all-groups --extra agent
 ```
 
-`--extra agent` installs the server extras (`fire`, `uvicorn`, `pyyaml`, …). The reusable lib is the `harness` package under `src/harness/`; the CLI/web app is `agent` under `src/agent/`.
+`--extra agent` installs the server extras (`fire`, `uvicorn`, `pyyaml`, …). Reusable helpers live in `src/harness/`; the CLI/web app is `src/agent/`.
 
 If you already cloned without submodules:
 
@@ -34,11 +47,11 @@ Skill packages live under `.agents/skills/` (`code-review-skill`).
 Copy `.env.example` to `.env` and set credentials:
 
 ```bash
-# Optional — provider env vars for name-only Model entries (anthropic:/google:/openai-chat: via infer_model)
+# Optional — native infer_model for name-only models (openai:/anthropic:/google:…)
 # OPENAI_API_KEY=...
 # ANTHROPIC_API_KEY=...
 
-# Optional — enable GitLab MCP for GitLab URLs
+# Optional — GitLab MCP (skipped at agent build if unset; GitHub review still works)
 GITLAB_API_URL=https://gitlab.example.com/api/v4
 GITLAB_PERSONAL_ACCESS_TOKEN=glpat-xxx
 
@@ -47,19 +60,19 @@ MS365_MCP_TOKEN_CACHE_PATH=/absolute/path/.config/ms365-mcp/.token-cache.json
 MS365_MCP_SELECTED_ACCOUNT_PATH=/absolute/path/.config/ms365-mcp/.selected-account.json
 ```
 
-Run a playbook:
+Start the server:
 
 ```bash
 agent
 ```
 
-Open `http://127.0.0.1:8000`. With both built-in specs loaded, ask for a code review or for help with Outlook mail.
+Open `http://127.0.0.1:8000`. With both built-in PlaybookSpecs loaded, ask for a code review or for help with Outlook mail.
 
 ## Web chat
 
-With more than one agent spec loaded, the web chat's only entry is the supervisor agent. It decides whether to hand the turn off to one agent or ask a clarifying question. The supervisor capability holds each agent's complete message history for that conversation. When the conversation switches between agents, each history stays in place: the history handed to outlook-mail does not include code-review's tool records. The supervisor agent's own chat transcript is still stored by `to_web`, and the supervisor uses it to decide whether the new message continues the previous agent.
+With more than one PlaybookSpec loaded, the web chat's only entry is the Supervisor agent. It hands the turn to one specialist or asks a clarifying question. The Supervisor capability keeps each specialist's message history per conversation, so outlook-mail history does not include code-review tool records. The Supervisor's own transcript is still stored by `to_web` and used to decide whether a new message continues the previous specialist.
 
-With a single spec loaded, the web chat talks to that agent directly.
+With a single PlaybookSpec loaded, the web chat talks to that agent directly.
 
 ## Programmatic usage
 
@@ -71,9 +84,9 @@ spec = PlaybookSpec.from_file('.agents/code-review.yaml')
 agent = spec.to_agent(custom_capability_types=CUSTOM_CAPABILITY_TYPES)
 ```
 
-- [`PlaybookSpec`](src/agent/playbook_spec.py) — AgentSpec plus `mcp_servers` / `models` / `model_providers`
+- [`PlaybookSpec`](src/agent/playbook_spec.py) — AgentSpec + `mcp_servers` / `models` / `model_providers`
 - [`Model`](src/harness/models/README.md) — optional Model capability and multi-provider helpers
-- [`harness.mcp`](src/harness/mcp/README.md) — Claude-compatible MCP toolset builders
+- [`harness.mcp`](src/harness/mcp/README.md) — Claude-compatible MCP toolset builders (env preflight skip)
 
 ## Example
 

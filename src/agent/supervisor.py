@@ -336,8 +336,10 @@ def supervisor_models(
 ) -> list[Model[Any]]:
     """Models for the supervisor agent, taken from the first configured spec.
 
-    TODO: Use the model the web UI selected for this turn as the supervisor
-    model, instead of always taking models[0] from the first loaded spec.
+    TODO(model-routing): Default/bootstrap model should be the web UI selection for
+    this turn (not always models[0] from the first spec). Full menu listing for
+    to_web should not eager-fail on optional later providers — align with Model
+    capability routing (UI default + resolve_model_id for user-driven picks).
     """
     if not specs:
         return []

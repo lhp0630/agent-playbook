@@ -84,6 +84,17 @@ def test_load_code_review_playbook_spec(monkeypatch: pytest.MonkeyPatch) -> None
     assert "code-review-skill" in (skills[0].include or [])
 
 
+def test_code_review_to_agent_without_gitlab_env(monkeypatch: pytest.MonkeyPatch) -> None:
+    # Missing GitLab credentials must not block GitHub-oriented agent construction.
+    monkeypatch.delenv("GITLAB_API_URL", raising=False)
+    monkeypatch.delenv("GITLAB_PERSONAL_ACCESS_TOKEN", raising=False)
+
+    spec = PlaybookSpec.from_file(Path(".agents") / "code-review.yaml")
+    assert spec.make_mcp_toolsets() == []
+    agent = spec.to_agent(custom_capability_types=CUSTOM_CAPABILITY_TYPES, model=TestModel())
+    assert agent.name == "code_review"
+
+
 def test_load_outlook_mail_playbook_spec(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("MS365_MCP_TOKEN_CACHE_PATH", "/tmp/ms365-mcp/.token-cache.json")
     monkeypatch.setenv(

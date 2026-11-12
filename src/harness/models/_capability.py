@@ -101,6 +101,11 @@ class Model(AbstractCapability[AgentDepsT]):
         return resolve_models(self.normalized_models, self.model_providers)
 
     def get_model(self) -> AgentModel | None:
+        # TODO(model-routing): Bootstrap should resolve only the first menu entry (later:
+        # the web UI selection) so optional later providers (e.g. anthropic) are not
+        # constructed up front. Longer term, treat that UI selection as the default and
+        # pick other menu entries from user input via resolve_model_id / a router —
+        # never eager-resolve the full menu on get_model.
         resolved = self.resolve()
         return resolved[0] if resolved else None
 
@@ -110,6 +115,8 @@ class Model(AbstractCapability[AgentDepsT]):
         *,
         model_id: KnownModelName | str,
     ) -> AgentModel | None:
+        # TODO(model-routing): Entry point for per-turn / user-driven model choice from
+        # the menu; keep single-entry resolution (do not build the whole menu here).
         del ctx
         entries = self.normalized_models or []
         matched = next((entry for entry in entries if entry["name"] == model_id), None)

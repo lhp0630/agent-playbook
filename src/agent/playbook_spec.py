@@ -50,7 +50,11 @@ class PlaybookSpec(AgentSpec):
         return resolve_models(normalize_models(self.models), self.model_providers)
 
     def make_mcp_toolsets(self) -> list[AbstractToolset[Any]]:
-        """Build prefixed MCP toolsets from `mcp_servers`."""
+        """Build prefixed MCP toolsets from `mcp_servers`.
+
+        Servers whose required `${VAR}` references are unset are skipped (see
+        [`make_mcp_toolsets`][harness.mcp.make_mcp_toolsets]).
+        """
         return make_mcp_toolsets(self.mcp_servers)
 
     def to_agent(
@@ -63,7 +67,8 @@ class PlaybookSpec(AgentSpec):
         """Construct an [`Agent`][pydantic_ai.Agent] from this playbook spec.
 
         Resolves the models menu for bootstrap when `model` is omitted, and attaches
-        MCP toolsets from `mcp_servers`.
+        MCP toolsets from `mcp_servers` after env preflight (unset optional MCP
+        credentials skip that server only).
         """
         resolved = self.resolve_models()
         effective_model = model if model is not None else (resolved[0] if resolved else None)

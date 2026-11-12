@@ -3,11 +3,11 @@
 from __future__ import annotations
 
 from collections.abc import Mapping, Sequence
-from typing import NotRequired, TypedDict
 
 from pydantic_ai.models import Model, infer_model
 from pydantic_ai.providers import infer_provider
 from pydantic_ai.providers.openai import OpenAIProvider
+from typing_extensions import NotRequired, TypedDict
 
 
 class ModelProvider(TypedDict):

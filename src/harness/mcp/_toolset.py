@@ -39,11 +39,50 @@ def expand_env_vars(value: Any) -> Any:
     return value
 
 
+def required_env_vars(value: Any) -> set[str]:
+    """Collect `${VAR}` names that have no `:-default` (must be set before expand)."""
+    if isinstance(value, str):
+        return {
+            match.group(1) for match in _ENV_VAR_PATTERN.finditer(value) if match.group(2) is None
+        }
+    if isinstance(value, dict):
+        names: set[str] = set()
+        for item in value.values():
+            names |= required_env_vars(item)
+        return names
+    if isinstance(value, list):
+        names = set()
+        for item in value:
+            names |= required_env_vars(item)
+        return names
+    return set()
+
+
+def mcp_server_missing_env(mcp_spec: McpServerSpec) -> frozenset[str]:
+    """Required env names referenced by this server that are not set in the process."""
+    payload = {
+        "command": mcp_spec.command,
+        "args": mcp_spec.args,
+        "env": mcp_spec.env,
+        "cwd": mcp_spec.cwd,
+        "url": mcp_spec.url,
+        "headers": mcp_spec.headers,
+    }
+    return frozenset(name for name in required_env_vars(payload) if name not in os.environ)
+
+
+def mcp_server_env_ready(mcp_spec: McpServerSpec) -> bool:
+    """True when every required `${VAR}` in the server config is present in the environment."""
+    return not mcp_server_missing_env(mcp_spec)
+
+
 def make_mcp_toolset(mcp_spec: McpServerSpec) -> AbstractToolset[Any]:
     """Build one prefixed MCP toolset the same way `load_mcp_toolsets` does per entry.
 
     Env expansion runs here (not at YAML load) so missing `${VAR}` only fails when the
     toolset is built. Prefer `command` when both `command` and `url` are set.
+    Callers that must tolerate unset optional credentials should use
+    [`make_mcp_toolsets`][harness.mcp.make_mcp_toolsets], which preflights and skips.
     """
     name = mcp_spec.name
     if mcp_spec.command is not None:
@@ -66,7 +105,18 @@ def make_mcp_toolset(mcp_spec: McpServerSpec) -> AbstractToolset[Any]:
 
 
 def make_mcp_toolsets(mcp_servers: Sequence[McpServerSpec] | None) -> list[AbstractToolset[Any]]:
-    """Build one prefixed toolset per server; `None` or empty returns `[]`."""
+    """Build prefixed toolsets for servers whose required `${VAR}`s are set.
+
+    Servers that reference unset `${VAR}` (no `:-default`) are skipped so optional
+    credentials (for example GitLab) do not block constructing the rest of the agent.
+    `None` or empty returns `[]`.
+    """
     if not mcp_servers:
         return []
-    return [make_mcp_toolset(mcp_spec) for mcp_spec in mcp_servers]
+    toolsets: list[AbstractToolset[Any]] = []
+    for mcp_spec in mcp_servers:
+        # Preflight before expand: missing optional MCP credentials skip this server only.
+        if not mcp_server_env_ready(mcp_spec):
+            continue
+        toolsets.append(make_mcp_toolset(mcp_spec))
+    return toolsets

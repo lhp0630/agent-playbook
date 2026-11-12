@@ -28,3 +28,8 @@ toolsets = make_mcp_toolsets(
 
 `${VAR}` / `${VAR:-default}` expand when building toolsets, not when validating the
 spec. Each result is wrapped in a PrefixedToolset using `name`.
+
+[`make_mcp_toolsets`][harness.mcp.make_mcp_toolsets] preflights required `${VAR}`
+references (no `:-default`) and **skips** servers whose variables are unset, so
+optional MCP credentials do not block agent construction. Use
+[`make_mcp_toolset`][harness.mcp.make_mcp_toolset] when a missing var should raise.
