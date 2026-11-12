@@ -3,8 +3,9 @@ import logging
 import os
 from pathlib import Path
 
-from pydantic_ai.agent.spec import AgentSpec
 from watchfiles import awatch
+
+from agent.playbook_spec import PlaybookSpec
 
 logger = logging.getLogger(__name__)
 
@@ -12,13 +13,13 @@ logger = logging.getLogger(__name__)
 class ConfigManager:
     config_path: Path
 
-    _agent_specs: list[tuple[Path, AgentSpec]] | None = None
+    _agent_specs: list[tuple[Path, PlaybookSpec]] | None = None
 
     def __init__(self):
         self.config_path = Path(os.environ.get("PLAYBOOK_CONFIG_PATH", ".agents"))
 
     @property
-    def agent_specs(self) -> list[tuple[Path, AgentSpec]]:
+    def agent_specs(self) -> list[tuple[Path, PlaybookSpec]]:
         if not self._agent_specs:
             self.load_agent_specs()
         assert self._agent_specs is not None
@@ -33,12 +34,12 @@ class ConfigManager:
         for ext in [".yml", ".yaml"]:
             files.extend(self.config_path.glob(f"*{ext}"))
 
-        specs: list[tuple[Path, AgentSpec]] = []
+        specs: list[tuple[Path, PlaybookSpec]] = []
         for path in files:
             try:
                 if not path.is_file():
                     raise FileNotFoundError()
-                specs.append((path, AgentSpec.from_file(path)))
+                specs.append((path, PlaybookSpec.from_file(path)))
             except Exception as e:
                 logger.error("Error loading agent spec %s: %s", path, e)
 

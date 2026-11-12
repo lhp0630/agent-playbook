@@ -1,14 +1,11 @@
 [project]
 name = "agent-playbook"
 version = "0.1.1"
-description = "YAML-configured multi-agent workflows powered by pydantic-ai DynamicWorkflow."
-requires-python = ">=3.10"
+description = "YAML-configured agents with MCP, skills, and a web supervisor."
+requires-python = ">=3.11"
 dependencies = [
     "pydantic>=2.0",
-    "pyyaml>=6.0",
-    "opensandbox>=0.1.15",
-    "pydantic-ai-slim[mcp,openai,web,web-fetch]>=2.52.0",
-    "pydantic-ai-harness[dynamic-workflow]>=0.52.0",
+    "pydantic-ai-slim[mcp,openai,web,web-fetch]>=2.66.0",
     "pydantic-ai-skills>=1.4.0",
 ]
 
@@ -18,9 +15,7 @@ agent = [
     "uvicorn>=0.30",
     "watchfiles>=1.2.0",
     "python-dotenv>=1.0",
-    "pandas>=2.3.3",
-    "python-calamine>=0.8.2",
-    "tabulate>=0.10.0",
+    "pyyaml>=6.0",
 ]
 
 [dependency-groups]

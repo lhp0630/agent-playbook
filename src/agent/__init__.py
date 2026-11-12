@@ -1,4 +1,6 @@
-"""Agent server package: config loading, CLI, and web startup."""
+"""Agent server package: PlaybookSpec loading, CLI, and web startup."""
+
+from agent.playbook_spec import PlaybookSpec
 
 __version__ = "0.1.1"
-__all__ = ["__version__"]
+__all__ = ["PlaybookSpec", "__version__"]

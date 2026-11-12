@@ -1,6 +1,6 @@
-"""Route a web chat turn to one loaded agent spec.
+"""Supervise a web chat turn onto one loaded agent spec.
 
-The routing agent is the only web entry when several specs are loaded. Each
+The supervisor agent is the only web entry when several specs are loaded. Each
 specialist keeps its own message history for a conversation, so a later handoff
 does not carry another agent's tool records.
 """
@@ -16,22 +16,26 @@ from typing import Any
 from pydantic_ai import Agent
 from pydantic_ai._agent_graph import CallToolsNode, ModelRequestNode
 from pydantic_ai._utils import fill_run_metadata
-from pydantic_ai.agent.spec import AgentSpec
 from pydantic_ai.capabilities import AbstractCapability
 from pydantic_ai.messages import ModelMessage
 from pydantic_ai.models import Model
 from pydantic_ai.result import FinalResult
 from pydantic_ai.tools import RunContext
 from pydantic_ai.toolsets import AbstractToolset, FunctionToolset
+from pydantic_ai_skills import SkillsCapability
 from pydantic_graph import End
 
-from harness.open_sandbox import OpenSandbox
-from harness.playbook import Playbook
-from harness.playbook._toolset import normalize_models, normalize_name, resolve_models
+from agent.names import normalize_name
+from agent.playbook_spec import PlaybookSpec
+from harness.models import Model as ModelCapability
+from harness.models import normalize_models, resolve_models
 
-CUSTOM_CAPABILITY_TYPES: list[type[AbstractCapability[Any]]] = [Playbook, OpenSandbox]
+CUSTOM_CAPABILITY_TYPES: list[type[AbstractCapability[Any]]] = [
+    SkillsCapability,
+    ModelCapability,
+]
 
-ROUTER_INSTRUCTIONS = """
+SUPERVISOR_INSTRUCTIONS = """
 You route each user message to one agent.
 Answer by calling one tool, or by asking a clarifying question.
 Each tool is one agent. Call the tool whose description matches the message.
@@ -48,7 +52,7 @@ After a tool returns, that result is the reply to the user.
 
 @dataclass(frozen=True)
 class AgentRoute:
-    """One loaded spec the router can hand a turn to."""
+    """One loaded spec the supervisor can hand a turn to."""
 
     name: str
     description: str
@@ -60,14 +64,14 @@ class WebEntry:
     """How to serve the loaded specs.
 
     `route` is set when exactly one spec is loaded and should be served directly.
-    It is None when the routing agent is the web entry.
+    It is None when the supervisor agent is the web entry.
     """
 
     route: AgentRoute | None
 
 
-def build_agent_catalog(specs: Sequence[tuple[Path, AgentSpec]]) -> list[AgentRoute]:
-    """Build the routing catalog from loaded specs.
+def build_agent_catalog(specs: Sequence[tuple[Path, PlaybookSpec]]) -> list[AgentRoute]:
+    """Build the supervisor catalog from loaded specs.
 
     Specs without a name or description are omitted: the model selects a tool by
     that description. Two specs that normalize to the same name would be the same
@@ -93,7 +97,7 @@ def build_agent_catalog(specs: Sequence[tuple[Path, AgentSpec]]) -> list[AgentRo
     return routes
 
 
-def prepare_web_entry(specs: Sequence[tuple[Path, AgentSpec]]) -> WebEntry:
+def prepare_web_entry(specs: Sequence[tuple[Path, PlaybookSpec]]) -> WebEntry:
     """Choose the web entry for the loaded specs.
 
     An empty catalog means there is nothing to serve.
@@ -106,22 +110,22 @@ def prepare_web_entry(specs: Sequence[tuple[Path, AgentSpec]]) -> WebEntry:
     return WebEntry(route=None)
 
 
-def resolve_models_for_spec(spec: AgentSpec) -> list[Model[Any]]:
-    """Prefer Playbook-configured models; fall back to OPENAI_* env vars."""
-    # TODO: Read models/model_providers from app_config and pass them into Playbook
-    # instead of pulling them from the playbook capability kwargs / OPENAI_* env.
+def resolve_models_for_spec(spec: PlaybookSpec) -> list[Model[Any]]:
+    """Resolve models from PlaybookSpec fields, else a Model capability."""
+    models = spec.resolve_models()
+    if models:
+        return models
     for cap in spec.capabilities:
-        if cap.name != "Playbook":
+        if cap.name != "Model":
             continue
-        kwargs = cap.kwargs
+        arguments = cap.arguments if isinstance(cap.arguments, dict) else {}
         models = resolve_models(
-            normalize_models(kwargs.get("models")),
-            kwargs.get("model_providers") or [],
+            normalize_models(arguments.get("models")),
+            arguments.get("model_providers") or [],
         )
         if models:
             return models
-    # Only reads OPENAI_* env vars.
-    return resolve_models(None, [])
+    return []
 
 
 def load_spec_agent(
@@ -129,16 +133,14 @@ def load_spec_agent(
     *,
     custom_capability_types: Sequence[type[AbstractCapability[Any]]] = (),
 ) -> tuple[Agent[Any, Any], list[Model[Any]]]:
-    """Build the specialist agent for one spec file."""
-    spec = AgentSpec.from_file(path)
+    """Build the specialist agent for one playbook spec file."""
+    spec = PlaybookSpec.from_file(path)
     models = resolve_models_for_spec(spec)
     if not models and not spec.model:
         raise RuntimeError(f"No model configured for agent {spec.name!r}.")
-    agent = Agent.from_file(
-        path,
-        custom_capability_types=list(custom_capability_types),
+    agent = spec.to_agent(
+        custom_capability_types=custom_capability_types,
         model=models[0] if models else None,
-        name=normalize_name(spec.name) if spec.name else None,
     )
     return agent, models
 
@@ -216,7 +218,7 @@ class SpecialistPool:
         return agent
 
 
-def _make_handoff(router: AgentRouter, route: AgentRoute):
+def _make_handoff(supervisor: Supervisor, route: AgentRoute):
     """Bind the target agent outside the tool signature.
 
     pydantic-ai publishes every parameter except ``RunContext`` in the tool schema.
@@ -229,19 +231,19 @@ def _make_handoff(router: AgentRouter, route: AgentRoute):
         Args:
             task: The user request, including URLs and explicit confirmations.
         """
-        return await router.handoff(ctx, route, task)
+        return await supervisor.handoff(ctx, route, task)
 
     return handoff
 
 
-def _router_function_toolset(
-    router: AgentRouter,
+def _supervisor_function_toolset(
+    supervisor: Supervisor,
     routes: Sequence[AgentRoute],
 ) -> FunctionToolset[Any]:
-    toolset: FunctionToolset[Any] = FunctionToolset(id="agent-router", sequential=True)
+    toolset: FunctionToolset[Any] = FunctionToolset(id="agent-supervisor", sequential=True)
     for route in routes:
         toolset.add_function(
-            _make_handoff(router, route),
+            _make_handoff(supervisor, route),
             name=route.name,
             description=route.description,
             sequential=True,
@@ -249,23 +251,23 @@ def _router_function_toolset(
     return toolset
 
 
-class AgentRouterToolset(FunctionToolset[Any]):
+class SupervisorToolset(FunctionToolset[Any]):
     """Expose one handoff tool per catalog entry for this run."""
 
-    def __init__(self, router: AgentRouter) -> None:
-        super().__init__(id="agent-router", sequential=True)
-        self._router = router
+    def __init__(self, supervisor: Supervisor) -> None:
+        super().__init__(id="agent-supervisor", sequential=True)
+        self._supervisor = supervisor
 
     async def for_run(self, ctx: RunContext[Any]) -> AbstractToolset[Any]:
-        routes = build_agent_catalog(self._router.specs())
-        return _router_function_toolset(self._router, routes)
+        routes = build_agent_catalog(self._supervisor.specs())
+        return _supervisor_function_toolset(self._supervisor, routes)
 
 
 @dataclass(kw_only=True)
-class AgentRouter(AbstractCapability[Any]):
+class Supervisor(AbstractCapability[Any]):
     """Handoff tools for the loaded agent specs, plus each specialist's history."""
 
-    specs: Callable[[], Sequence[tuple[Path, AgentSpec]]]
+    specs: Callable[[], Sequence[tuple[Path, PlaybookSpec]]]
     custom_capability_types: Sequence[type[AbstractCapability[Any]]] = ()
     loader: Callable[[AgentRoute], Agent[Any, Any]] | None = None
     histories: SpecialistHistories = field(default_factory=SpecialistHistories)
@@ -284,10 +286,10 @@ class AgentRouter(AbstractCapability[Any]):
         return None
 
     def get_instructions(self) -> str:
-        return ROUTER_INSTRUCTIONS
+        return SUPERVISOR_INSTRUCTIONS
 
-    def get_toolset(self) -> AgentRouterToolset:
-        return AgentRouterToolset(self)
+    def get_toolset(self) -> SupervisorToolset:
+        return SupervisorToolset(self)
 
     async def handoff(self, ctx: RunContext[Any], route: AgentRoute, task: str) -> str:
         """Run the specialist with this conversation's history for that agent only."""
@@ -311,7 +313,7 @@ class AgentRouter(AbstractCapability[Any]):
     ) -> Any:
         """Use the specialist reply as this turn's output.
 
-        The tool return is appended first so the router transcript kept by to_web
+        The tool return is appended first so the supervisor transcript kept by to_web
         still shows which agent was called.
         """
         if not isinstance(node, CallToolsNode):
@@ -329,7 +331,20 @@ class AgentRouter(AbstractCapability[Any]):
         return End(FinalResult(output))
 
 
-def router_models() -> list[Model[Any]]:
-    """Model for the routing agent."""
-    # Only reads OPENAI_* env vars.
-    return resolve_models(None, [])
+def supervisor_models(
+    specs: Sequence[tuple[Path, PlaybookSpec]] | None = None,
+) -> list[Model[Any]]:
+    """Models for the supervisor agent, taken from the first configured spec.
+
+    TODO(model-routing): Default/bootstrap model should be the web UI selection for
+    this turn (not always models[0] from the first spec). Full menu listing for
+    to_web should not eager-fail on optional later providers — align with Model
+    capability routing (UI default + resolve_model_id for user-driven picks).
+    """
+    if not specs:
+        return []
+    for _path, spec in specs:
+        models = resolve_models_for_spec(spec)
+        if models:
+            return models
+    return []

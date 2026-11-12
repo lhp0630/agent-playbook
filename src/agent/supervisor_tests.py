@@ -1,10 +1,9 @@
-"""Invariants for the web routing catalog and per-conversation specialist history."""
+"""Invariants for the web supervisor catalog and per-conversation specialist history."""
 
 from pathlib import Path
 
 import pytest
 from pydantic_ai import Agent
-from pydantic_ai.agent.spec import AgentSpec
 from pydantic_ai.messages import (
     ModelMessage,
     ModelRequest,
@@ -18,21 +17,22 @@ from pydantic_ai.models.function import AgentInfo, FunctionModel
 from pydantic_ai.models.test import TestModel
 from pydantic_ai.toolsets import FunctionToolset
 
-from agent.router import (
+from agent.playbook_spec import PlaybookSpec
+from agent.supervisor import (
     AgentRoute,
-    AgentRouter,
+    Supervisor,
     build_agent_catalog,
     prepare_web_entry,
 )
 
 
-def _spec(name: str | None, description: str | None, path: Path) -> tuple[Path, AgentSpec]:
+def _spec(name: str | None, description: str | None, path: Path) -> tuple[Path, PlaybookSpec]:
     data: dict[str, str] = {}
     if name is not None:
         data["name"] = name
     if description is not None:
         data["description"] = description
-    return path, AgentSpec.from_dict(data)
+    return path, PlaybookSpec.from_dict(data)
 
 
 def test_catalog_keeps_name_and_description(tmp_path: Path) -> None:
@@ -86,7 +86,7 @@ def test_single_spec_is_served_directly(tmp_path: Path) -> None:
     assert entry.route.name == "outlook_mail"
 
 
-def test_several_specs_use_the_router(tmp_path: Path) -> None:
+def test_several_specs_use_the_supervisor(tmp_path: Path) -> None:
     entry = prepare_web_entry(
         [
             _spec("outlook-mail", "Summarize Outlook mail", tmp_path / "outlook-mail.yaml"),
@@ -111,8 +111,8 @@ async def test_tool_names_follow_normalized_spec_names(tmp_path: Path) -> None:
             f"name: {spec.name}\ndescription: {spec.description}\n",
             encoding="utf-8",
         )
-    router = AgentRouter(specs=lambda: specs)
-    active = await router.get_toolset().for_run(None)  # type: ignore[arg-type]
+    supervisor = Supervisor(specs=lambda: specs)
+    active = await supervisor.get_toolset().for_run(None)  # type: ignore[arg-type]
     assert isinstance(active, FunctionToolset)
     assert set(active.tools) == {"code_review", "outlook_mail"}
     assert active.tools["code_review"].description == "Review a pull request"
@@ -128,8 +128,8 @@ async def test_handoff_tool_schema_accepts_only_task(tmp_path: Path) -> None:
         f"name: {spec.name}\ndescription: {spec.description}\n",
         encoding="utf-8",
     )
-    router = AgentRouter(specs=lambda: specs)
-    active = await router.get_toolset().for_run(None)  # type: ignore[arg-type]
+    supervisor = Supervisor(specs=lambda: specs)
+    active = await supervisor.get_toolset().for_run(None)  # type: ignore[arg-type]
     assert isinstance(active, FunctionToolset)
     schema = active.tools["outlook_mail"].function_schema.json_schema
     assert set(schema["properties"]) == {"task"}
@@ -205,8 +205,8 @@ async def test_same_conversation_keeps_each_agent_history(tmp_path: Path) -> Non
             return agent
         return Agent(outlook, name=route.name)
 
-    router = AgentRouter(specs=lambda: specs, loader=loader)
-    agent = Agent(FunctionModel(_route), name="router", capabilities=[router])
+    supervisor = Supervisor(specs=lambda: specs, loader=loader)
+    agent = Agent(FunctionModel(_route), name="supervisor", capabilities=[supervisor])
 
     first = await agent.run("list mail", conversation_id="session-a")
     assert first.output == "mail-reply"

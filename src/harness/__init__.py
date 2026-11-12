@@ -1,5 +1,5 @@
-"""Harness capabilities for agent-playbook."""
+"""Local helpers: Model capability and MCP toolset builders."""
 
-from . import open_sandbox, playbook
+from . import mcp, models
 
-__all__ = ["open_sandbox", "playbook"]
+__all__ = ["mcp", "models"]
