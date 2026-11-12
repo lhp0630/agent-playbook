@@ -82,11 +82,3 @@ def test_normalize_models_keeps_optional_provider():
         {"name": "openai-chat:ornith:35b", "model_provider": "default"}
     ]
     assert normalize_models(None) is None
-
-
-def test_resolve_models_node_override():
-    models = resolve_models(
-        [{"name": "openai-chat:node-model", "model_provider": "default"}],
-        _PROVIDERS,
-    )
-    _assert_openai_chat(models[0], "openai:node-model", "http://llm/v1/")

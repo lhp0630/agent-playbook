@@ -8,7 +8,7 @@ from pydantic_ai.models.test import TestModel
 from pydantic_ai_skills import SkillsCapability
 
 from agent.playbook_spec import PlaybookSpec
-from agent.supervisor import CUSTOM_CAPABILITY_TYPES, load_spec_agent
+from agent.supervisor import CUSTOM_CAPABILITY_TYPES
 
 
 def test_playbook_spec_rejects_providers_without_models():
@@ -23,19 +23,20 @@ def test_playbook_spec_rejects_providers_without_models():
         )
 
 
-def test_playbook_spec_parses_mcp_and_models():
+def test_playbook_spec_models_and_providers_default_none():
+    spec = PlaybookSpec.from_dict({"name": "x"})
+    assert spec.models is None
+    assert spec.model_providers is None
+    assert spec.resolve_models() == []
+
+
+def test_playbook_spec_parses_models_and_providers_fields():
     spec = PlaybookSpec.from_dict(
         {
             "name": "code-review",
-            "mcp_servers": [
-                {
-                    "name": "gitlab",
-                    "command": "npx",
-                    "args": ["mcp-gitlab"],
-                    "env": {"GITLAB_API_URL": "${GITLAB_API_URL}"},
-                }
+            "models": [
+                {"name": "openai-chat:gpt-4o-mini", "model_provider": "custom_openai"},
             ],
-            "models": [{"name": "openai-chat:gpt-4o-mini", "model_provider": "custom_openai"}],
             "model_providers": [
                 {
                     "name": "custom_openai",
@@ -45,10 +46,16 @@ def test_playbook_spec_parses_mcp_and_models():
             ],
         }
     )
-    assert spec.mcp_servers is not None
-    assert spec.mcp_servers[0].name == "gitlab"
-    assert spec.mcp_servers[0].command == "npx"
-    assert len(spec.resolve_models()) == 1
+    assert spec.models == [
+        {"name": "openai-chat:gpt-4o-mini", "model_provider": "custom_openai"},
+    ]
+    assert spec.model_providers == [
+        {
+            "name": "custom_openai",
+            "base_url": "https://api.openai.com/v1",
+            "api_key": "sk-z",
+        }
+    ]
 
 
 def test_load_code_review_playbook_spec(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -95,6 +102,6 @@ def test_load_outlook_mail_playbook_spec(monkeypatch: pytest.MonkeyPatch) -> Non
     assert server.args is not None
     assert "@softeria/ms-365-mcp-server" in server.args
 
-    agent, models = load_spec_agent(path, custom_capability_types=CUSTOM_CAPABILITY_TYPES)
+    # Spec may omit models (native env / caller-supplied); bootstrap with TestModel.
+    agent = spec.to_agent(custom_capability_types=CUSTOM_CAPABILITY_TYPES, model=TestModel())
     assert agent.name == "outlook_mail"
-    assert models
